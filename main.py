@@ -17,7 +17,7 @@ bound_map = {
     ],
 }
 
-FILEPATH = 'imgs/img1.jpg'
+FILEPATH = 'imgs/2V XM/300M.jpg'
 TYPE_STRING = "PbO2"
 
 def red_brightness(res) -> float:
@@ -65,10 +65,10 @@ def deposition_mask(res, type_string):
     mask = cv2.inRange(image, lower, upper)
 
     deposit = cv2.bitwise_and(res, res, mask=mask)
-    kernel = np.ones((1, 1), np.uint8)
+    kernel = np.ones((2, 2), np.uint8)
     erosion = cv2.erode(deposit, kernel, iterations=1)
 
-    return deposit
+    return erosion
 
 
 def threshold(res, image, dep):
@@ -131,12 +131,12 @@ if __name__ ==  '__main__':
     edges = cv2.Canny(image=img_gray, threshold1=8, threshold2=80)
 
 
-    cv2.imshow("Deposition", deposit)
+    #cv2.imshow("Deposition", deposit)
 
     threshold(edges, image, deposit)
     sz = mask_size(img_gray)
 
-    cv2.imshow("test", edges)
+    #cv2.imshow("test", edges)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
