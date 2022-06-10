@@ -17,6 +17,8 @@ bound_map = {
     ],
 }
 
+FILEPATH = 'imgs/img1.jpg'
+TYPE_STRING = "PbO2"
 
 def red_brightness(res) -> float:
     image = cv2.cvtColor(res, cv2.COLOR_BGR2HSV)
@@ -63,14 +65,13 @@ def deposition_mask(res, type_string):
     mask = cv2.inRange(image, lower, upper)
 
     deposit = cv2.bitwise_and(res, res, mask=mask)
-    kernel = np.ones((2, 2))
+    kernel = np.ones((1, 1), np.uint8)
     erosion = cv2.erode(deposit, kernel, iterations=1)
 
-    cv2.imshow("Deposit", erosion)
-    return erosion
+    return deposit
 
 
-def threshold(res, image):
+def threshold(res, image, dep):
     ret, thresh = cv2.threshold(res, 128, 255, 0)
     contours, heirarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
@@ -78,17 +79,33 @@ def threshold(res, image):
 
     areas = []
     for cnt in contours:
-        M = cv2.moments(cnt)
         area = cv2.contourArea(cnt)
-        if area < 20 and area > 8:
+        #if area < 1000 and area > 8:
+        if area > 9 and area < 600:
             areas.append(area)
 
+    img_gray = cv2.cvtColor(dep, cv2.COLOR_BGR2GRAY)
+    thresh = cv2.threshold(img_gray, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
+    pixels = cv2.countNonZero(thresh)
+
+    ratio = sum(areas)/pixels
+
+    ratio_string = "{0:.5f}%".format(ratio * 100)
+
+    image = cv2.putText(image, f"Percent Imperfections: {ratio_string}", (50,50), cv2.FONT_HERSHEY_SIMPLEX,
+                        1, (255,0,0), 2, cv2.LINE_AA)
+
     cv2.imshow("Image", image)
-    print(sum(areas))
+
+
+def mask_size(image):
+    thresh = cv2.threshold(image, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
+    pixels = cv2.countNonZero(thresh)
+    return pixels
+
 
 if __name__ ==  '__main__':
-    FILEPATH = 'imgs/img6 PbI2.jpg'
-    TYPE_STRING = "PbI2"
+
 
     image = cv2.imread(FILEPATH)
     result = image.copy()
@@ -106,14 +123,20 @@ if __name__ ==  '__main__':
         result = increase_brightness(result, 5)
         b_val = red_brightness(result)
 
+
+
     #cv2.imshow("final", result)
     deposit = deposition_mask(result, TYPE_STRING)
     img_gray = cv2.cvtColor(deposit, cv2.COLOR_BGR2GRAY)
-    edges = cv2.Canny(image=img_gray, threshold1=30, threshold2=50)
-
-    threshold(edges, image)
+    edges = cv2.Canny(image=img_gray, threshold1=8, threshold2=80)
 
 
+    cv2.imshow("Deposition", deposit)
+
+    threshold(edges, image, deposit)
+    sz = mask_size(img_gray)
+
+    cv2.imshow("test", edges)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
