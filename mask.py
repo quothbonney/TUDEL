@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+# HSV Ranges for each color
+# Refer to  https://i.stack.imgur.com/gyuw4.png for new ranges
 bound_map = {
     "PbO2": [
         [8, 50, 20],
@@ -46,7 +48,7 @@ class Mask:
 
     def edge_sobel_mask(self, deposition):
         # Erodes img to just the edges of the deposit mask
-        kernel = np.ones((7, 7), np.uint8)
+        kernel = np.ones((5, 5), np.uint8)
         img_gray = cv2.cvtColor(deposition, cv2.COLOR_BGR2GRAY)
         gauss = cv2.GaussianBlur(img_gray, (3, 3), 0)
         erosion = cv2.erode(gauss, kernel, iterations=1)
