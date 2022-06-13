@@ -1,17 +1,20 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from calibrate import calibrate
+from mask import Mask
 
-FILEPATH = 'imgs/Ethan PbO2/15M 5mA.jpg'
+FILEPATH = 'imgs/1 Att/img5 PbO2.jpg'
 TYPE_STRING = "PbO2"
 
 # HSV Ranges for each color
 # Refer to  https://i.stack.imgur.com/gyuw4.png for new ranges
+
 bound_map = {
     "PbO2": [
-        [0, 0, 0],
+        [0, 50, 20],
         [50, 255, 150],
-        [160, 0, 0],
+        [160, 50, 20],
         [255, 255, 150]
     ],
     "PEDOT": [
@@ -23,7 +26,6 @@ bound_map = {
          [35, 255, 205]
     ],
 }
-
 
 def deposition_mask(res, type_string):
     image = cv2.cvtColor(res, cv2.COLOR_BGR2HSV)
@@ -104,37 +106,39 @@ def mask_size(mask):
 
 if __name__ == "__main__":
     image = cv2.imread(FILEPATH)
+    image = calibrate(image, 5)
     result = image.copy()
 
-    deposit = deposition_mask(result, TYPE_STRING)
+    mask = Mask(result, TYPE_STRING)
 
-    sobel = sobel(deposit)  # Get sobel mask
-    sobel_masked = cv2.bitwise_and(deposit, deposit, mask=sobel)  # Get resultant img from mask
+    deposit = mask.deposition_mask()
+    cv2.imshow("deposit", deposit)
+    dep_masked = cv2.bitwise_and(result, result, mask=deposit)
+    sobel = mask.sobel_mask(dep_masked)  # Get sobel mask
+    sobel_masked = cv2.bitwise_and(result, result, mask=sobel)
 
-    edges = edge_mask(deposit)  # Get edge mask
-    edge_masked = cv2.bitwise_and(deposit, deposit, mask=edges)
+    edges = mask.edge_sobel_mask(dep_masked)
 
-    deposit_size = mask_size(deposit)
-    final_mask = sobel_masked - edge_masked  # Remove edges from mask
-    final_size = mask_size(final_mask)
+    final_mask = sobel - edges
 
-    dst = cv2.addWeighted(result, 1, final_mask, 0.5, 0)  # Merge image and mask together
+    cv2.imshow('fuck you', final_mask)
 
-    plt.imshow(dst)
+    #dst = cv2.addWeighted(result, 1, final_mask, 0.5, 0)  # Merge image and mask together
 
-
-    ratio = (final_size)/deposit_size
-
-    ratio_string = "{0:.5f}%".format(ratio * 100)
-
-    print("Sobel size: " + str(final_size))
-    print("Deposit size: " + str(deposit_size))
-    print("Percent Imperfection: " + ratio_string)
+    #plt.imshow(dst)
 
 
-    cv2.imshow('argh', deposit)
-    plt.title(f'Analysis of {TYPE_STRING} at {FILEPATH}')
-    plt.text(50, 50, f"Percent imperfection: {ratio_string}")
+    #ratio = (final_size)/deposit_size
+
+    #ratio_string = "{0:.5f}%".format(ratio * 100)
+
+    #print("Sobel size: " + str(final_size))
+    #print("Deposit size: " + str(deposit_size))
+    #print("Percent Imperfection: " + ratio_string)
+
+
+    #plt.title(f'Analysis of {TYPE_STRING} at {FILEPATH}')
+    #plt.text(50, 50, f"Percent imperfection: {ratio_string}")
 
     plt.show()
 
