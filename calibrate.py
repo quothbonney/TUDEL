@@ -42,7 +42,7 @@ def calibrate(img, value):
         if s == "n":
             sys.exit()
         elif s == "y":
-            pass
+            return img
         else:
             print(s + " is not recognized.")
             sys.exit()

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from calibrate import calibrate
 from mask import Mask
 
-FILEPATH = 'imgs/Ethan PbO2/2M 10mA.jpg'
+FILEPATH = 'imgs/1 Att/img3 PbO2 bad.jpg'
 TYPE_STRING = "PbO2"
 
 def mask_size(mask):
@@ -28,14 +28,16 @@ if __name__ == "__main__":
     sobel_masked = cv2.bitwise_and(result, result, mask=sobel)
     edges = mask.edge_sobel_mask(dep_masked)
 
-    final_mask = sobel - edges
+    final_mask = cv2.threshold(sobel-edges, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
     errors_masked = cv2.bitwise_and(result, result, mask=final_mask)
+
 
     green = np.zeros(result.shape, np.uint8)
     green[:] = (57, 255, 20)
 
     green_mask = cv2.bitwise_and(green, green, mask=final_mask)
     dst = cv2.bitwise_or(result, green_mask)
+
 
     final_size = mask_size(errors_masked)
     deposit_size = mask_size(dep_masked)
@@ -47,6 +49,7 @@ if __name__ == "__main__":
     print("Deposit size: " + str(deposit_size))
     print("Percent Imperfection: " + ratio_string)
 
+    #cv2.imshow('mask', dep_masked)
 
     plt.imshow(dst)
     plt.title(f'Analysis of {TYPE_STRING} at {FILEPATH}')
