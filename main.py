@@ -3,8 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from calibrate import calibrate
 from mask import Mask
+import analysis
 
-FILEPATH = 'imgs/1 Att/img3 PbO2 bad.jpg'
+FILEPATH = 'imgs/1 Att/img1.jpg'
 TYPE_STRING = "PbO2"
 
 def mask_size(mask):
@@ -39,8 +40,8 @@ if __name__ == "__main__":
     dst = cv2.bitwise_or(result, green_mask)
 
 
-    final_size = mask_size(errors_masked)
-    deposit_size = mask_size(dep_masked)
+    final_size = analysis.mask_size(errors_masked)
+    deposit_size = analysis.mask_size(dep_masked)
     ratio = (final_size)/deposit_size
 
     ratio_string = "{0:.5f}%".format(ratio * 100)
@@ -48,6 +49,9 @@ if __name__ == "__main__":
     print("Sobel size: " + str(final_size))
     print("Deposit size: " + str(deposit_size))
     print("Percent Imperfection: " + ratio_string)
+
+    analysis.saturation_histogram(dep_masked)
+    analysis.saturation_histogram(sobel)
 
     #cv2.imshow('mask', dep_masked)
 
