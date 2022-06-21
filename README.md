@@ -25,6 +25,6 @@ All dependency versions are listed in the `requirements.txt` file and can be eas
   - Unzip the folder
 - `cd` into the `Electrodeposition_analysis`
   - If you installed via git, just execute `cd Electrodeposition_analysis`
-  - If you installed via .zip, copy the folder's location from the source, open command line and type `cd <PASTE LOCATION HERE>`
+  - If you installed via .zip, copy the unzipped folder's location from the source, open command line and type `cd <PASTE LOCATION HERE>`
 - From here, you can execute any of the following commands
 

@@ -18,7 +18,7 @@ def mask_size(mask):
 
 if __name__ == "__main__":
     image = cv2.imread(FILEPATH)
-    image = calibrate(image, 5)
+
     result = image.copy()
 
     mask = Mask(result, TYPE_STRING)
