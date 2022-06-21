@@ -28,3 +28,34 @@ All dependency versions are listed in the `requirements.txt` file and can be eas
   - If you installed via .zip, copy the unzipped folder's location from the source, open command line and type `cd <PASTE LOCATION HERE>`
 - From here, you can execute any of the following commands
 
+## Usage
+
+### Calibration
+
+Place a piece of bright red tape on a well-lit white surface and photograph. Calibrate the image to a color standard
+with the following command. Do not forget the quotation marks.
+```shell
+python .\calibrate.py "<IMAGE DIRECTORY>"
+```
+
+### Calculate Percent Imperfection
+
+After successful calibration, calculate the percent Imperfection of the film with
+```shell
+python .\main.py <TYPE> "<IMAGE DIRECTORY>"
+```
+A list of valid types can be viewed with `python .\main.py --help`
+
+
+### Get Dimensions
+
+The height and width of a film can be calculated with the following
+```shell
+python .\features\dimensions.py <TYPE> "<IMAGE_DIRECTORY>"
+```
+
+
+## Version History
+- V0.3 Documentation and CLI interface
+- V0.2 Fixed Sobel edge bug and major refactoring
+- V0.1 Initial Commit
