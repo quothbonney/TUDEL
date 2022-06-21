@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-FILEPATH = 'imgs/random/5.jpg'
+FILEPATH = '../imgs/random/5.jpg'
 one_mm = 7
 
 
