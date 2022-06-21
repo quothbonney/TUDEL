@@ -5,8 +5,8 @@ from calibrate import calibrate
 from mask import Mask
 import analysis
 
-FILEPATH = 'imgs/1 Att/img1.jpg'
-TYPE_STRING = "PbO2"
+FILEPATH = 'imgs/1 Att/perovskite.jpg'
+TYPE_STRING = "Perovskite"
 
 def mask_size(mask):
     # Count number of pixels in a mask
@@ -51,9 +51,10 @@ if __name__ == "__main__":
     print("Percent Imperfection: " + ratio_string)
 
     analysis.saturation_histogram(dep_masked)
-    analysis.saturation_histogram(sobel)
+    analysis.saturation_histogram(sobel_masked)
 
-    #cv2.imshow('mask', dep_masked)
+
+    cv2.imshow('mask', dep_masked)
 
     plt.imshow(dst)
     plt.title(f'Analysis of {TYPE_STRING} at {FILEPATH}')

@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+
 # HSV Ranges for each color
 # Refer to  https://i.stack.imgur.com/gyuw4.png for new ranges
 bound_map = {
@@ -16,6 +17,10 @@ bound_map = {
         [20, 50, 20],
          [35, 255, 205]
     ],
+    "Perovskite": [
+        [15, 30, 0],
+        [80, 255, 255]
+    ]
 }
 
 class Mask:
