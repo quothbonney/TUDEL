@@ -1,12 +1,10 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from calibrate import calibrate
+import sys
 from mask import Mask
 import analysis
 
-FILEPATH = 'imgs/1 Att/img1.jpg'
-TYPE_STRING = "PbO2"
 
 def mask_size(mask):
     # Count number of pixels in a mask
@@ -17,11 +15,22 @@ def mask_size(mask):
 
 
 if __name__ == "__main__":
-    image = cv2.imread(FILEPATH)
-    image = calibrate(image, 5)
+    if sys.argv[1] == "--help":
+        print("""Syntax: \npython .\main.py "<TYPE>" "<IMAGE DIRECTORY>" \n""")
+        print("Available types: \nPbO2 \nPbI2 \nPEDOT")
+        print("Warning: types are case sensitive")
+        sys.exit()
+
+    image = cv2.imread(sys.argv[2])
+
+
     result = image.copy()
 
-    mask = Mask(result, TYPE_STRING)
+    try:
+        mask = Mask(result, sys.argv[1])
+    except Exception:
+        print("Cannot create mask")
+        sys.exit()
 
     deposit = mask.deposition_mask()
     dep_masked = cv2.bitwise_and(result, result, mask=deposit)
@@ -57,7 +66,7 @@ if __name__ == "__main__":
     cv2.imshow('mask', dep_masked)
 
     plt.imshow(dst)
-    plt.title(f'Analysis of {TYPE_STRING} at {FILEPATH}')
+    plt.title(f'Analysis of {sys.argv[1]} at {sys.argv[2]}')
     plt.text(50, 50, f"Percent imperfection: {ratio_string}")
     plt.show()
 

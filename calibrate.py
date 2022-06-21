@@ -52,3 +52,14 @@ def calibrate(img, value):
         b_val = red_brightness(image)
 
     return image
+
+if __name__ == '__main__':
+    try:
+        image = cv2.imread(sys.argv[1])
+        image = calibrate(image, 5)
+    except Exception:
+        print("Cannot find filepath" + sys.argv[1])
+        sys.exit()
+
+    cv2.imwrite(f"output/{sys.argv[1]}_calibrated.png", image)
+    print(f"Wrote {sys.argv[1]}_calibrated.png in /output/ ")
