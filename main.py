@@ -5,8 +5,8 @@ from calibrate import calibrate
 from mask import Mask
 import analysis
 
-FILEPATH = 'imgs/1 Att/perovskite.jpg'
-TYPE_STRING = "Perovskite"
+FILEPATH = 'imgs/1 Att/img1.jpg'
+TYPE_STRING = "PbO2"
 
 def mask_size(mask):
     # Count number of pixels in a mask
