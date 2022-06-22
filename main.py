@@ -56,6 +56,7 @@ def main(img, type):
     dst = cv2.cvtColor(dst, cv2.COLOR_BGR2RGB)
     return dst
 
+
 def percent_imp(img, type):
     image = img
 

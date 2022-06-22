@@ -22,14 +22,11 @@ bound_map = {
 }
 
 
-
-
 # Convert image to grayscale
-def size(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+def size(image, typestr):
     local = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower = np.array(bound_map[sys.argv[1]][0])
-    upper = np.array(bound_map[sys.argv[1]][1])
+    lower = np.array(bound_map[typestr][0])
+    upper = np.array(bound_map[typestr][1])
     mask = cv2.inRange(local, lower, upper)
     thresh = cv2.threshold(mask, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
 
@@ -41,11 +38,9 @@ def size(image):
 
     average = sum(widths)/len(widths)
 
-    global one_mm
-    return str(round(average/one_mm, 3))
+    return str(round(average, 3))
 
 if __name__ == '__main__':
-    one_mm = 16 * (2/3)
 
     image = cv2.imread(sys.argv[2])
 
