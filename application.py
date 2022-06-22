@@ -8,6 +8,7 @@ import webbrowser
 from tkinter import messagebox
 from calibrate import calibrate
 import main
+import dimensions
 
 # Init
 tk = Tk()
@@ -77,7 +78,6 @@ def Image_Select():
         return
 
 
-
 v1 = DoubleVar()
 v2 = DoubleVar()
 v3 = DoubleVar()
@@ -107,11 +107,21 @@ def hsv_buttons():
     F2.place(x=900, y=50)
 
     l_h_lbl = Label(F2, text="Calibration Complete.")
-    l_h_lbl.grid(row=0, column=0, sticky=W, padx="100")
+    l_h_lbl.grid(row=0, column=0, sticky=W, padx="30")
 
 
 def analyze_buttons():
-    pass
+    global option_variable
+
+    if option_variable.get() == 'Select Type':
+        messagebox.showerror('TUDEL', 'Error: Please select film type')
+
+    val = main.percent_imp(original, option_variable.get())
+
+    F2 = Frame(tk)
+    F2.place(x=900, y=70)
+    lbl = Label(F2, text=f"Percent Imperfection: {val}")
+    lbl.grid(row=0, column=0, sticky=W, padx="30")
 
 
 def Sıfırla():
@@ -175,6 +185,37 @@ def analyze_img(*args):
     saveBTN.config(state="normal", cursor="hand2")
 
 
+def dimension_img(*args):
+    global option_variable
+
+    if option_variable.get() == 'Select Type':
+        messagebox.showerror('TUDEL', 'Error: Please select film type')
+
+    width = dimensions.size(original, option_variable.get())
+    F2 = Frame(tk)
+    F2.place(x=900, y=90)
+
+    a = Label(F2, text=f"Width: {width}px")
+    a.grid(row=0, column=0, sticky=W, padx="30")
+
+    new = cv2.rotate(original, cv2.ROTATE_90_CLOCKWISE)
+    height = dimensions.size(new, option_variable.get())
+    F3 = Frame(tk)
+    F3.place(x=900, y=110)
+    b = Label(F3, text=f"Height: {height}px")
+    b.grid(row=0, column=0, sticky=W, padx="30")
+
+    F4 = Frame(tk)
+    F4.place(x=900, y=130)
+    c = Label(F4, text=f"Surface Area: {str(round(float(height) * float(width), 4))}px^2")
+    c.grid(row=0, column=0, sticky=W, padx="30")
+
+    F5 = Frame(tk)
+    F5.place(x=900, y=110)
+    d= Label(F5, text=f"\n\nNOTE: Values are in pixels. To get value in mm,\n divide by number of pixels in 1mm by \naligning film with a calibration slide.")
+    d.grid(row=0, column=0, sticky=W, padx="30")
+
+
 
 def calibrate_button():
     threading.Thread(target=calibrate_img).start()
@@ -184,6 +225,10 @@ def calibrate_button():
 def analysis_button():
     threading.Thread(target=analyze_img).start()
     threading.Thread(target=analyze_buttons).start()
+
+
+def dimension_button():
+    threading.Thread(target=dimension_img).start()
 
 
 def trgt2():
@@ -215,6 +260,11 @@ hsv_btn = Button(tk, text="Analyze", width=13, command=analysis_button)
 hsv_btn.bind("<ButtonRelease-1>", analyze_img)
 hsv_btn.config(cursor="hand2")
 hsv_btn.place(x=800, y=115)
+
+# Dimensions Button
+hsv_btn = Button(tk, text="Dimensions", width=13, command=dimension_button)
+hsv_btn.config(cursor="hand2")
+hsv_btn.place(x=800, y=150)
 
 # Choice button
 choices = ['PbO2', 'PbI2', 'PEDOT']
