@@ -36,6 +36,7 @@ l2 = Label(F1, text="Modified Image", font="bold")
 l2.grid(row=0, column=1)
 L2 = Label(F1, text="Modified", height="25", width="52", bd=0.5, relief="solid")
 L2.grid(row=1, column=1)
+global_return = 0
 
 
 # Image Select and Save
@@ -58,6 +59,7 @@ def Image_Select():
 
         # Resimi Aç
         im = Image.open(imageselect)
+        im.thumbnail((360, 360))
         tkimage = ImageTk.PhotoImage(im)
 
         img_rgb = np.array(im)
@@ -112,52 +114,6 @@ def hsv_buttons():
 
     l_h_lbl = Label(F2, text="Lower - H | Ton")
     l_h_lbl.grid(row=0, column=0, sticky=W, padx="100")
-
-
-
-def blur_def():
-    global F3
-    global blur
-    global blur2
-    global blur3
-    global blurred
-    global blurred2
-
-    if F2:
-        F2.grid_forget()
-        F2.destroy()
-
-    def trgt_scale(event):
-        threading.Thread(target=blrr).start()
-
-    def trgt_scale2(event):
-        threading.Thread(target=blrr2).start()
-
-    F3 = Frame(tk)
-    F3.place(x=900, y=50)
-
-    blr_lbl = Label(F3, text="Pixel")
-    blr_lbl.grid(row=0, column=0, sticky=W, padx="100")
-
-
-
-
-def blrr2():
-    global orjn
-    saveBTN.config(state="disabled", cursor="")
-
-    blurring = cv2.blur(img_rgb, (blurred.get(), blurred2.get()))
-    orjn = cv2.blur(original, (blurred.get(), blurred2.get()))
-
-    imgtk3 = ImageTk.PhotoImage(image=Image.fromarray(blurring))
-
-    L2 = Label(F1, image=imgtk3)
-    L2.image = imgtk3
-    L2.grid(row=1, column=1)
-
-    saveBTN.config(state="normal", cursor="hand2")
-
-
 
 
 
@@ -222,20 +178,24 @@ def Sıfırla():
 
 
 def Kayıt():
+    global global_return
     # Yeni Resmi Kayıt Et
     dosyaAdi = filedialog.asksaveasfilename(initialdir="Desktop", filetypes=[("PNG file", "*.png")])
     if not dosyaAdi:
         return
-    cv2.imwrite(f"{dosyaAdi}" + ".png", orjn)
+    cv2.imwrite(f"{dosyaAdi}.png", global_return)
     KayıtMesajı = Label(F1, text="Kayıt Edildi.", font="bold")
     KayıtMesajı.grid(row=2, column=1, pady=27)
     KayıtMesajı.after(2000, KayıtMesajı.destroy)
 
 
 def calibrate_img(*args):
+    global global_return
     calibrated_img = calibrate(original, 5)
-    calibrated_img.thumbnail((360, 360))
-    imgtk3 = ImageTk.PhotoImage(calibrated_img)
+    global_return = calibrated_img
+    im = Image.fromarray(calibrated_img)
+    im.thumbnail((360, 360))
+    imgtk3 = ImageTk.PhotoImage(image=im)
 
     L2 = Label(F1, image=imgtk3)
     L2.image = imgtk3
@@ -249,10 +209,6 @@ def calibrate_img(*args):
 def maske_trgt():
     threading.Thread(target=calibrate_img).start()
     threading.Thread(target=hsv_buttons).start()
-
-
-def blur_trgt():
-    threading.Thread(target=blur_def).start()
 
 
 def blur_trgt2():
@@ -275,9 +231,6 @@ hsv_btn = Button(tk, text="HSV Maskeleme", width=13, command=maske_trgt)
 hsv_btn.bind("<ButtonRelease-1>", calibrate_img)
 hsv_btn.config(cursor="hand2")
 hsv_btn.place(x=800, y=56)
-blur_btn = Button(tk, text="Bilateral Filter", width=13, command=blur_trgt)
-blur_btn.config(cursor="hand2")
-blur_btn.place(x=800, y=90)
 
 saveBTN = Button(tk, text="Save As", command=trgt3)
 saveBTN.config(state="disabled")
