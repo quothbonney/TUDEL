@@ -1,10 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# Başlangıç Tarihi: 06.05.2021 - 17:06
-# Bitiş Tarihi: 11.05.2021 - 21:00
-# instagram.com/yazilimfuryasi
-# yazilimfuryasi.com
-
 from tkinter import *
 from tkinter import filedialog
 from PIL import ImageTk, Image
@@ -12,7 +5,10 @@ import cv2
 import numpy as np
 import threading
 import webbrowser
+from tkinter import messagebox
 from calibrate import calibrate
+import main
+import dimensions
 
 # Init
 tk = Tk()
@@ -82,8 +78,6 @@ def Image_Select():
         return
 
 
-
-
 v1 = DoubleVar()
 v2 = DoubleVar()
 v3 = DoubleVar()
@@ -112,56 +106,22 @@ def hsv_buttons():
     F2 = Frame(tk)
     F2.place(x=900, y=50)
 
-    l_h_lbl = Label(F2, text="Lower - H | Ton")
-    l_h_lbl.grid(row=0, column=0, sticky=W, padx="100")
+    l_h_lbl = Label(F2, text="Calibration Complete.")
+    l_h_lbl.grid(row=0, column=0, sticky=W, padx="30")
 
 
+def analyze_buttons():
+    global option_variable
 
-def blrr():
-    global orjn
+    if option_variable.get() == 'Select Type':
+        messagebox.showerror('TUDEL', 'Error: Please select film type')
 
-    saveBTN.config(state="disabled", cursor="")
+    val = main.percent_imp(original, option_variable.get())
 
-    bilFilter = cv2.bilateralFilter(img_rgb, blur.get(), blur2.get(), blur3.get())
-    orjn = cv2.bilateralFilter(original, blur.get(), blur2.get(), blur3.get())
-
-    imgtk3 = ImageTk.PhotoImage(image=Image.fromarray(bilFilter))
-
-    L2 = Label(F1, image=imgtk3)
-    L2.image = imgtk3
-    L2.grid(row=1, column=1)
-
-    saveBTN.config(state="normal", cursor="hand2")
-
-
-def blurring():
-    global F3
-    global blur
-    global blur2
-    global blur3
-    if F2:
-        F2.grid_forget()
-        F2.destroy()
-
-    def trgt_scale():
-        threading.Thread(target=blrr).start()
-
-    F4 = Frame(tk)
-    F4.place(x=900, y=50)
-
-    blr_lbl2 = Label(F4, text="Pixel")
-    blr_lbl2.grid(row=0, column=0, sticky=W, padx="100")
-
-    blur1 = Scale(F4, length=255, variable=v7, from_=1, to=100, troughcolor="red", orient=HORIZONTAL)
-    blur1.bind("<ButtonRelease-1>", trgt_scale)
-    blur1.grid(row=1, column=0, padx=27)
-
-    blr_lbl3 = Label(F4, text="Renk")
-    blr_lbl3.grid(row=2, column=0, sticky=W, padx="100")
-
-    blur2 = Scale(F4, length=255, variable=v8, from_=1, to=100, troughcolor="white", orient=HORIZONTAL)
-    blur2.bind("<ButtonRelease-1>", trgt_scale)
-    blur2.grid(row=3, column=0, padx=27)
+    F2 = Frame(tk)
+    F2.place(x=900, y=50)
+    lbl = Label(F2, text=f"Percent Imperfection: {val}")
+    lbl.grid(row=0, column=0, sticky=W, padx="30")
 
 
 def Sıfırla():
@@ -177,21 +137,22 @@ def Sıfırla():
     u_v.set(0)
 
 
-def Kayıt():
+def write_file():
     global global_return
-    # Yeni Resmi Kayıt Et
-    dosyaAdi = filedialog.asksaveasfilename(initialdir="Desktop", filetypes=[("PNG file", "*.png")])
-    if not dosyaAdi:
+
+    filename = filedialog.asksaveasfilename(initialdir="Desktop", filetypes=[("PNG file", "*.png")])
+    if not filename:
         return
-    cv2.imwrite(f"{dosyaAdi}.png", global_return)
-    KayıtMesajı = Label(F1, text="Kayıt Edildi.", font="bold")
-    KayıtMesajı.grid(row=2, column=1, pady=27)
-    KayıtMesajı.after(2000, KayıtMesajı.destroy)
+    cv2.imwrite(f"{filename}.png", global_return)
+    label = Label(F1, text="Saved.", font="bold")
+    label.grid(row=2, column=1, pady=27)
+    label.after(2000, label.destroy)
 
 
 def calibrate_img(*args):
     global global_return
-    calibrated_img = calibrate(original, 5)
+
+    calibrated_img = calibrate(original, 2)
     global_return = calibrated_img
     im = Image.fromarray(calibrated_img)
     im.thumbnail((360, 360))
@@ -204,15 +165,70 @@ def calibrate_img(*args):
     saveBTN.config(state="normal", cursor="hand2")
 
 
+def analyze_img(*args):
+    global global_return
+    global option_variable
+
+    if option_variable.get() == 'Select Type':
+        messagebox.showerror('TUDEL', 'Error: Please select film type')
+
+    img = main.main(original, option_variable.get())
+    global_return = img
+    im = Image.fromarray(img)
+    im.thumbnail((360, 360))
+    imgtk3 = ImageTk.PhotoImage(image=im)
+
+    L2 = Label(F1, image=imgtk3)
+    L2.image = imgtk3
+
+    L2.grid(row=1, column=1)
+    saveBTN.config(state="normal", cursor="hand2")
 
 
-def maske_trgt():
+def dimension_img(*args):
+    global option_variable
+
+    if option_variable.get() == 'Select Type':
+        messagebox.showerror('TUDEL', 'Error: Please select film type')
+
+    width = dimensions.size(original, option_variable.get())
+    F2 = Frame(tk)
+    F2.place(x=900, y=50)
+
+    a = Label(F2, text=f"Width: {width}px")
+    a.grid(row=0, column=0, sticky=W, padx="30")
+
+    new = cv2.rotate(original, cv2.ROTATE_90_CLOCKWISE)
+    height = dimensions.size(new, option_variable.get())
+    F3 = Frame(tk)
+    F3.place(x=900, y=70)
+    b = Label(F3, text=f"Height: {height}px")
+    b.grid(row=0, column=0, sticky=W, padx="30")
+
+    F4 = Frame(tk)
+    F4.place(x=900, y=90)
+    c = Label(F4, text=f"Surface Area: {str(round(float(height) * float(width), 4))}px^2")
+    c.grid(row=0, column=0, sticky=W, padx="30")
+
+    F5 = Frame(tk)
+    F5.place(x=900, y=110)
+    d= Label(F5, text=f"\n\nNOTE: Values are in pixels. To get value in mm,\n divide by number of pixels in 1mm by \naligning film with a calibration slide.")
+    d.grid(row=0, column=0, sticky=W, padx="30")
+
+
+
+def calibrate_button():
     threading.Thread(target=calibrate_img).start()
     threading.Thread(target=hsv_buttons).start()
 
 
-def blur_trgt2():
-    threading.Thread(target=blurring).start()
+def analysis_button():
+    threading.Thread(target=analyze_img).start()
+    threading.Thread(target=analyze_buttons).start()
+
+
+def dimension_button():
+    threading.Thread(target=dimension_img).start()
 
 
 def trgt2():
@@ -220,21 +236,42 @@ def trgt2():
 
 
 def trgt3():
-    threading.Thread(target=Kayıt).start()
+    threading.Thread(target=write_file).start()
 
-
+# Open Button
 B1 = Button(tk, text="Open Image", command=trgt2)
 B1.config(cursor="hand2")
 B1.place(x=180, y=450)
 
-hsv_btn = Button(tk, text="HSV Maskeleme", width=13, command=maske_trgt)
-hsv_btn.bind("<ButtonRelease-1>", calibrate_img)
-hsv_btn.config(cursor="hand2")
-hsv_btn.place(x=800, y=56)
-
+# Save as Button
 saveBTN = Button(tk, text="Save As", command=trgt3)
 saveBTN.config(state="disabled")
 saveBTN.place(x=565, y=450)
+
+
+# Calibrate Button
+hsv_btn = Button(tk, text="Calibrate", width=13, command=calibrate_button)
+hsv_btn.bind("<ButtonRelease-1>", calibrate_img)
+hsv_btn.config(cursor="hand2")
+hsv_btn.place(x=800, y=80)
+
+# Analysis Button
+hsv_btn = Button(tk, text="Analyze", width=13, command=analysis_button)
+hsv_btn.bind("<ButtonRelease-1>", analyze_img)
+hsv_btn.config(cursor="hand2")
+hsv_btn.place(x=800, y=115)
+
+# Dimensions Button
+hsv_btn = Button(tk, text="Dimensions", width=13, command=dimension_button)
+hsv_btn.config(cursor="hand2")
+hsv_btn.place(x=800, y=150)
+
+# Choice button
+choices = ['PbO2', 'PbI2', 'PEDOT']
+option_variable = StringVar(tk)
+option_variable.set('Select Type')
+w = OptionMenu(tk, option_variable, *choices)
+w.place(x=800, y=35)
 
 
 def callback(url):

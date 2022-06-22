@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 import sys
 from mask import Mask
 import analysis
@@ -14,20 +13,13 @@ def mask_size(mask):
     return pixels
 
 
-if __name__ == "__main__":
-    if sys.argv[1] == "--help":
-        print("""Syntax: \npython .\main.py "<TYPE>" "<IMAGE DIRECTORY>" \n""")
-        print("Available types: \nPbO2 \nPbI2 \nPEDOT")
-        print("Warning: types are case sensitive")
-        sys.exit()
-
-    image = cv2.imread(sys.argv[2])
-
+def main(img, type):
+    image = img
 
     result = image.copy()
 
     try:
-        mask = Mask(result, sys.argv[1])
+        mask = Mask(result, type)
     except Exception:
         print("Cannot create mask")
         sys.exit()
@@ -46,7 +38,7 @@ if __name__ == "__main__":
     green[:] = (57, 255, 20)
 
     green_mask = cv2.bitwise_and(green, green, mask=final_mask)
-    dst = cv2.bitwise_or(result, green_mask)
+
 
 
     final_size = analysis.mask_size(errors_masked)
@@ -59,16 +51,44 @@ if __name__ == "__main__":
     print("Deposit size: " + str(deposit_size))
     print("Percent Imperfection: " + ratio_string)
 
-    analysis.saturation_histogram(dep_masked)
-    analysis.saturation_histogram(sobel_masked)
+    dst = cv2.bitwise_or(result, green_mask)
+
+    dst = cv2.cvtColor(dst, cv2.COLOR_BGR2RGB)
+    return dst
 
 
-    cv2.imshow('mask', dep_masked)
+def percent_imp(img, type):
+    image = img
 
-    plt.imshow(dst)
-    plt.title(f'Analysis of {sys.argv[1]} at {sys.argv[2]}')
-    plt.text(50, 50, f"Percent imperfection: {ratio_string}")
-    plt.show()
+    result = image.copy()
 
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    try:
+        mask = Mask(result, type)
+    except Exception:
+        print("Cannot create mask")
+        sys.exit()
+
+    deposit = mask.deposition_mask()
+    dep_masked = cv2.bitwise_and(result, result, mask=deposit)
+    sobel = mask.sobel_mask(dep_masked)  # Get sobel mask
+    sobel_masked = cv2.bitwise_and(result, result, mask=sobel)
+    edges = mask.edge_sobel_mask(dep_masked)
+
+    final_mask = cv2.threshold(sobel-edges, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
+    errors_masked = cv2.bitwise_and(result, result, mask=final_mask)
+
+
+    green = np.zeros(result.shape, np.uint8)
+    green[:] = (57, 255, 20)
+
+    green_mask = cv2.bitwise_and(green, green, mask=final_mask)
+
+
+
+    final_size = analysis.mask_size(errors_masked)
+    deposit_size = analysis.mask_size(dep_masked)
+    ratio = (final_size)/deposit_size
+
+    ratio_string = "{0:.5f}%".format(ratio * 100)
+
+    return ratio_string

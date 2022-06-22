@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import sys
 
+counter = 0
+
 def red_brightness(res) -> float:
     image = cv2.cvtColor(res, cv2.COLOR_BGR2HSV)
 
@@ -25,6 +27,7 @@ def red_brightness(res) -> float:
 
 
 def calibrate(img, value):
+    global counter
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     h, s, v = cv2.split(hsv)
 
@@ -47,11 +50,18 @@ def calibrate(img, value):
             print(s + " is not recognized.")
             sys.exit()
 
-    while b_val < 180:
-        image = calibrate(image, 5)
+    while b_val < 165:
+        counter += 1
+        image = calibrate(image, 2)
         b_val = red_brightness(image)
 
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     return image
+
+
+def getcounter():
+    global counter
+    return counter
 
 if __name__ == '__main__':
     try:
