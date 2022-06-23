@@ -1,22 +1,12 @@
 import cv2
 import numpy as np
 import sys
-from mask import Mask
-import analysis
-
-
-def mask_size(mask):
-    # Count number of pixels in a mask
-    gray = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-    thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]  # Set all pixels = 1, 0;
-    pixels = cv2.countNonZero(thresh)  # Basically just a sum of all pixels
-    return pixels
+from features.mask import Mask
+from features import analysis
 
 
 def main(img, type):
-    image = img
-
-    result = image.copy()
+    result = img.copy()
 
     try:
         mask = Mask(result, type)

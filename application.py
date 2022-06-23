@@ -6,9 +6,9 @@ import numpy as np
 import threading
 import webbrowser
 from tkinter import messagebox
-from calibrate import calibrate
-import main
-import dimensions
+from features.calibrate import calibrate
+from features import dimensions, main, analysis
+from features.mask import Mask
 
 # Init
 tk = Tk()
@@ -42,6 +42,7 @@ def Image_Select():
     global original
     global img_rgb
     global imageselect
+    global global_return
 
     imageselect = filedialog.askopenfilename(initialdir="Desktop",
                                              filetypes=[('Image files', '*.png'), ('Image files', '*.jpg')])
@@ -52,8 +53,8 @@ def Image_Select():
 
     try:
         original = cv2.imread(imageselect)
+        global_return = original
 
-        # Resimi Aç
         im = Image.open(imageselect)
         im.thumbnail((360, 360))
         tkimage = ImageTk.PhotoImage(im)
@@ -111,39 +112,32 @@ def hsv_buttons():
 
 
 def analyze_buttons():
+    global global_return
     global option_variable
 
     if option_variable.get() == 'Select Type':
         messagebox.showerror('TUDEL', 'Error: Please select film type')
 
-    val = main.percent_imp(original, option_variable.get())
+    mask = Mask(global_return, option_variable.get())
+    error_mask = analysis.errors(mask, global_return)
+    original_mask = mask.deposition_mask()
+    ratio: str = analysis.percent_imp(error_mask, original_mask, global_return)
 
     F2 = Frame(tk)
     F2.place(x=900, y=70)
-    lbl = Label(F2, text=f"Percent Imperfection: {val}")
+    lbl = Label(F2, text=f"Percent Imperfection: {ratio}")
     lbl.grid(row=0, column=0, sticky=W, padx="30")
 
-
-def Sıfırla():
-    LabelHSV["text"] = ""
-    L2 = Label(F1, image=tkimage)
-    L2.image = tkimage
-    L2.grid(row=1, column=1)
-    l_h.set(0)
-    l_s.set(0)
-    l_v.set(0)
-    u_h.set(0)
-    u_s.set(0)
-    u_v.set(0)
 
 
 def write_file():
     global global_return
+    ret = cv2.cvtColor(global_return, cv2.COLOR_BGR2RGB)
 
     filename = filedialog.asksaveasfilename(initialdir="Desktop", filetypes=[("PNG file", "*.png")])
     if not filename:
         return
-    cv2.imwrite(f"{filename}.png", global_return)
+    cv2.imwrite(f"{filename}.png", ret)
     label = Label(F1, text="Saved.", font="bold")
     label.grid(row=2, column=1, pady=27)
     label.after(2000, label.destroy)
@@ -152,9 +146,9 @@ def write_file():
 def calibrate_img(*args):
     global global_return
 
-    calibrated_img = calibrate(original, 2)
-    global_return = calibrated_img
-    im = Image.fromarray(calibrated_img)
+    global_return = calibrate(global_return, 2)
+
+    im = Image.fromarray(global_return)
     im.thumbnail((360, 360))
     imgtk3 = ImageTk.PhotoImage(image=im)
 
@@ -172,9 +166,15 @@ def analyze_img(*args):
     if option_variable.get() == 'Select Type':
         messagebox.showerror('TUDEL', 'Error: Please select film type')
 
-    img = main.main(original, option_variable.get())
-    global_return = img
-    im = Image.fromarray(img)
+    # img = main.main(original, option_variable.get())
+
+    mask = Mask(global_return, option_variable.get())
+    error_mask = analysis.errors(mask, global_return)
+    dst = analysis.show_errors(error_mask, global_return)
+
+
+    global_return = dst
+    im = Image.fromarray(dst)
     im.thumbnail((360, 360))
     imgtk3 = ImageTk.PhotoImage(image=im)
 
@@ -184,6 +184,15 @@ def analyze_img(*args):
     L2.grid(row=1, column=1)
     saveBTN.config(state="normal", cursor="hand2")
 
+
+def mask_img(*args):
+    global global_return
+    global option_variable
+
+    mask = Mask(global_return, option_variable.get())
+    error_mask = analysis.errors(mask, global_return)
+    original_mask = mask.deposition_mask()
+    ratio: str = analysis.percent_imp(error_mask, original_mask, global_return)
 
 def dimension_img(*args):
     global option_variable
@@ -211,7 +220,7 @@ def dimension_img(*args):
     c.grid(row=0, column=0, sticky=W, padx="30")
 
     F5 = Frame(tk)
-    F5.place(x=900, y=110)
+    F5.place(x=900, y=150)
     d= Label(F5, text=f"\n\nNOTE: Values are in pixels. To get value in mm,\n divide by number of pixels in 1mm by \naligning film with a calibration slide.")
     d.grid(row=0, column=0, sticky=W, padx="30")
 
