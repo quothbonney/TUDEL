@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-import analysis
+from features import analysis
 import os
 
 
