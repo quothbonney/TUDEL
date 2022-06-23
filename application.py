@@ -119,7 +119,7 @@ def analyze_buttons():
     val = main.percent_imp(original, option_variable.get())
 
     F2 = Frame(tk)
-    F2.place(x=900, y=50)
+    F2.place(x=900, y=70)
     lbl = Label(F2, text=f"Percent Imperfection: {val}")
     lbl.grid(row=0, column=0, sticky=W, padx="30")
 
@@ -193,7 +193,7 @@ def dimension_img(*args):
 
     width = dimensions.size(original, option_variable.get())
     F2 = Frame(tk)
-    F2.place(x=900, y=50)
+    F2.place(x=900, y=90)
 
     a = Label(F2, text=f"Width: {width}px")
     a.grid(row=0, column=0, sticky=W, padx="30")
@@ -201,12 +201,12 @@ def dimension_img(*args):
     new = cv2.rotate(original, cv2.ROTATE_90_CLOCKWISE)
     height = dimensions.size(new, option_variable.get())
     F3 = Frame(tk)
-    F3.place(x=900, y=70)
+    F3.place(x=900, y=110)
     b = Label(F3, text=f"Height: {height}px")
     b.grid(row=0, column=0, sticky=W, padx="30")
 
     F4 = Frame(tk)
-    F4.place(x=900, y=90)
+    F4.place(x=900, y=130)
     c = Label(F4, text=f"Surface Area: {str(round(float(height) * float(width), 4))}px^2")
     c.grid(row=0, column=0, sticky=W, padx="30")
 
