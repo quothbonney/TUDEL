@@ -241,7 +241,6 @@ def dimension_img(*args):
     d.grid(row=0, column=0, sticky=W, padx="30")
 
 
-
 def calibrate_button():
     threading.Thread(target=calibrate_img).start()
     threading.Thread(target=hsv_buttons).start()
@@ -261,10 +260,20 @@ def mask_button():
 
 def manual_mask_button():
     global global_return
-    o = selection.main()
-    print(o)
 
+    left, top, right, bottom = selection.main(global_return)
 
+    # Ensure that it won't slice backwards
+    if top > bottom:
+        bottom, top = top, bottom
+    if left > right:
+        right, left = left, right
+
+    # Numpy slicing crop that I refuse to believe I'm smart enough to have thought of myself
+    cropped = global_return[top:bottom, left:right]
+
+    global_return = cropped
+    update_image(global_return)
 
 def trgt2():
     threading.Thread(target=Image_Select).start()

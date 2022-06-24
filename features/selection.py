@@ -27,14 +27,14 @@ def update_sel_rect(event):
     output = (topx, topy, botx, boty)
 
 
-def main(path="imgs/sample/perovskite.jpg"):
+def main(path):
     global canvas, rect_id
     window = tk.Toplevel()
     window.title("Select Area")
     window.geometry('%sx%s' % (WIDTH, HEIGHT))
     window.configure(background='grey')
 
-    img = ImageTk.PhotoImage(Image.open(path))
+    img = ImageTk.PhotoImage(Image.fromarray(path))
     canvas = tk.Canvas(window, width=img.width(), height=img.height(),
                        borderwidth=0, highlightthickness=0)
     canvas.pack(expand=True)
