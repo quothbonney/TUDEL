@@ -19,10 +19,13 @@ def update_sel_rect(event):
     global rect_id
     global output
     global topy, topx, botx, boty
+    global x_top, y_top, x_bot, y_bot
 
     botx, boty = event.x, event.y
     canvas.coords(rect_id, topx, topy, botx, boty)  # Update selection rect.
+
     output = (topx, topy, botx, boty)
+
 
 def main(path="imgs/sample/perovskite.jpg"):
     global canvas, rect_id
@@ -42,10 +45,15 @@ def main(path="imgs/sample/perovskite.jpg"):
     rect_id = canvas.create_rectangle(topx, topy, topx, topy,
                                       dash=(2,2), fill='', outline='white')
 
+
     canvas.bind('<Button-1>', get_mouse_posn)
-    canvas.bind('<B1-Motion>', update_sel_rect)
+    canvas.bind('<B1-Motion>', update_sel_rect)  # Does what it sounds like
 
+    # Use arbitrary variable var to force tkinter to wait until button click
+    var = tk.IntVar()
+    button = tk.Button(window, text="Save and Exit", width=20, height=5, command=lambda: var.set(1))
+    button.place(relx=.1, rely=.1, anchor="c")
 
+    button.wait_variable(var)
+    window.destroy()
     return output
-
-
