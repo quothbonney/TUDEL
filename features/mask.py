@@ -1,27 +1,9 @@
 import cv2
 import numpy as np
+import json
 
-
-# HSV Ranges for each color
-# Refer to  https://i.stack.imgur.com/gyuw4.png for new ranges
-bound_map = {
-    "PbO2": [
-        [8, 50, 20],
-        [40, 255, 150],
-    ],
-    "PEDOT": [
-        [90, 50, 20],
-         [120, 255, 205],
-    ],
-    "PbI2": [
-        [20, 50, 20],
-         [35, 255, 205]
-    ],
-    "Perovskite": [
-        [15, 30, 0],
-        [80, 255, 255]
-    ]
-}
+f = open("src/spectrum.json")
+bound_map = json.load(f)
 
 class Mask:
     def __init__(self, image, type_string):
@@ -72,3 +54,5 @@ class Mask:
         mask = cv2.threshold(grad, 120, 255, 0)[1]
 
         return mask
+
+f.close()
