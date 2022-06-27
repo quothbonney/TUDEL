@@ -43,7 +43,7 @@ def main(path):
 
     # Create selection rectangle (invisible since corner points are equal).
     rect_id = canvas.create_rectangle(topx, topy, topx, topy,
-                                      dash=(2,2), fill='', outline='white')
+                                      width=4, fill='', outline='red')
 
 
     canvas.bind('<Button-1>', get_mouse_posn)

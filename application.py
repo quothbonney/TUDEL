@@ -131,8 +131,14 @@ def analyze_buttons():
         messagebox.showerror('TUDEL', 'Error: Please select film type')
 
     mask = Mask(global_return, option_variable.get())
-    error_mask = analysis.errors(mask, global_return)
     original_mask = mask.deposition_mask()
+    error_mask = analysis.errors(original_mask, mask, global_return)
+
+
+
+
+    cv2.imshow('errors2', error_mask)
+    cv2.imshow('original2', original_mask)
     ratio: str = analysis.percent_imp(error_mask, original_mask, global_return)
 
     F2 = Frame(tk)
@@ -140,7 +146,8 @@ def analyze_buttons():
     lbl = Label(F2, text=f"Percent Imperfection: {ratio}")
     lbl.grid(row=0, column=0, sticky=W, padx="30")
 
-
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 def write_file():
     global global_return
