@@ -9,13 +9,19 @@ from tkinter import messagebox
 from features.calibrate import calibrate
 from features import dimensions, selection, analysis
 from features.mask import Mask
+import json
 
 # Init
 tk = Tk()
+
+f = open("src/spectrum.json")
+bound_map = json.load(f)
+
 windowWidth = tk.winfo_reqwidth()
 windowHeight = tk.winfo_reqheight()
 positionRight = int(tk.winfo_screenwidth() / 3 - windowWidth / 3)
 positionDown = int(tk.winfo_screenheight() / 3 - windowHeight / 1)
+
 tk.geometry(f"800x510+{positionRight}+{positionDown}")
 tk.resizable(width=False, height=False)
 
@@ -329,7 +335,7 @@ hsv_btn.config(cursor="hand2")
 hsv_btn.place(x=800, y=285)
 
 # Choice button
-choices = ['PbO2', 'PbI2', 'PEDOT']
+choices = [choice for choice in bound_map]
 option_variable = StringVar(tk)
 option_variable.set('Select Type')
 w = OptionMenu(tk, option_variable, *choices)
@@ -340,3 +346,4 @@ def callback(url):
     webbrowser.open_new(url)
 
 tk.mainloop()
+f.close()
