@@ -188,7 +188,8 @@ def analyze_img(*args):
     # img = main.main(original, option_variable.get())
 
     mask = Mask(global_return, option_variable.get())
-    error_mask = analysis.errors(mask, global_return)
+    dep_masked = mask.deposition_mask()
+    error_mask = analysis.errors(mask, global_return, dep_masked)
     dst = analysis.show_errors(error_mask, global_return)
 
 

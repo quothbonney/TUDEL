@@ -44,9 +44,8 @@ def show_errors(mask, image):
 
     green = np.zeros(result.shape, np.uint8)
     green[:] = (57, 255, 20)
-    green_mask = cv2.bitwise_and(green, green, mask=mask)
+    dst = cv2.bitwise_and(green, result, mask=mask)
 
-    dst = cv2.bitwise_or(result, green_mask)
     return dst
 
 
