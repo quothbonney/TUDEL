@@ -47,7 +47,7 @@ class Mask:
         abs_grad_y = cv2.convertScaleAbs(grad_y)
 
         grad = cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
-        mask = cv2.threshold(grad, 150, 255, 0)[1]
+        mask = cv2.threshold(grad, 122, 255, 0)[1]
 
         return mask
 
@@ -69,6 +69,6 @@ class Mask:
 
         grad = cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
 
-        mask = cv2.threshold(grad, 122, 255, 0)[1]
+        mask = cv2.threshold(grad, 120, 255, 0)[1]
 
         return mask

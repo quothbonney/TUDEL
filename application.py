@@ -7,7 +7,7 @@ import threading
 import webbrowser
 from tkinter import messagebox
 from features.calibrate import calibrate
-from features import dimensions, main, analysis
+from features import dimensions, selection, analysis
 from features.mask import Mask
 
 # Init
@@ -34,6 +34,18 @@ L2 = Label(F1, text="Modified", height="25", width="52", bd=0.5, relief="solid")
 L2.grid(row=1, column=1)
 global_return = 0
 
+
+def update_image(dst):
+    global_return = dst
+    im = Image.fromarray(dst)
+    im.thumbnail((360, 360))
+    imgtk3 = ImageTk.PhotoImage(image=im)
+
+    L2 = Label(F1, image=imgtk3)
+    L2.image = imgtk3
+
+    L2.grid(row=1, column=1)
+    saveBTN.config(state="normal", cursor="hand2")
 
 # Image Select and Save
 def Image_Select():
@@ -119,8 +131,14 @@ def analyze_buttons():
         messagebox.showerror('TUDEL', 'Error: Please select film type')
 
     mask = Mask(global_return, option_variable.get())
-    error_mask = analysis.errors(mask, global_return)
     original_mask = mask.deposition_mask()
+    error_mask = analysis.errors(original_mask, mask, global_return)
+
+
+
+
+    cv2.imshow('errors2', error_mask)
+    cv2.imshow('original2', original_mask)
     ratio: str = analysis.percent_imp(error_mask, original_mask, global_return)
 
     F2 = Frame(tk)
@@ -128,7 +146,8 @@ def analyze_buttons():
     lbl = Label(F2, text=f"Percent Imperfection: {ratio}")
     lbl.grid(row=0, column=0, sticky=W, padx="30")
 
-
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 def write_file():
     global global_return
@@ -169,7 +188,8 @@ def analyze_img(*args):
     # img = main.main(original, option_variable.get())
 
     mask = Mask(global_return, option_variable.get())
-    error_mask = analysis.errors(mask, global_return)
+    dep_masked = mask.deposition_mask()
+    error_mask = analysis.errors(mask, global_return, dep_masked)
     dst = analysis.show_errors(error_mask, global_return)
 
 
@@ -190,9 +210,13 @@ def mask_img(*args):
     global option_variable
 
     mask = Mask(global_return, option_variable.get())
-    error_mask = analysis.errors(mask, global_return)
     original_mask = mask.deposition_mask()
-    ratio: str = analysis.percent_imp(error_mask, original_mask, global_return)
+
+    dep_masked = cv2.bitwise_and(global_return, global_return, mask=original_mask)
+    update_image(dep_masked)
+
+    return dep_masked
+
 
 def dimension_img(*args):
     global option_variable
@@ -225,7 +249,6 @@ def dimension_img(*args):
     d.grid(row=0, column=0, sticky=W, padx="30")
 
 
-
 def calibrate_button():
     threading.Thread(target=calibrate_img).start()
     threading.Thread(target=hsv_buttons).start()
@@ -239,6 +262,26 @@ def analysis_button():
 def dimension_button():
     threading.Thread(target=dimension_img).start()
 
+
+def mask_button():
+    threading.Thread(target=mask_img).start()
+
+def manual_mask_button():
+    global global_return
+
+    left, top, right, bottom = selection.main(global_return)
+
+    # Ensure that it won't slice backwards
+    if top > bottom:
+        bottom, top = top, bottom
+    if left > right:
+        right, left = left, right
+
+    # Numpy slicing crop that I refuse to believe I'm smart enough to have thought of myself
+    cropped = global_return[top:bottom, left:right]
+
+    global_return = cropped
+    update_image(global_return)
 
 def trgt2():
     threading.Thread(target=Image_Select).start()
@@ -274,6 +317,16 @@ hsv_btn.place(x=800, y=115)
 hsv_btn = Button(tk, text="Dimensions", width=13, command=dimension_button)
 hsv_btn.config(cursor="hand2")
 hsv_btn.place(x=800, y=150)
+
+# Auto Mask Button
+hsv_btn = Button(tk, text="Auto Mask", width=13, command=mask_button)
+hsv_btn.config(cursor="hand2")
+hsv_btn.place(x=800, y=250)
+
+# Manual Mask Button
+hsv_btn = Button(tk, text="Manual Mask", width=13, command=manual_mask_button)
+hsv_btn.config(cursor="hand2")
+hsv_btn.place(x=800, y=285)
 
 # Choice button
 choices = ['PbO2', 'PbI2', 'PEDOT']

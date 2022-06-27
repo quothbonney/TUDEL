@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 def mask_size(mask):
     # Count number of pixels in a mask
     gray = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-    thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]  # Set all pixels = 1, 0;
+    thresh = cv2.threshold(gray, 128, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]  # Set all pixels = 1, 0;
     pixels = cv2.countNonZero(thresh)  # Basically just a sum of all pixels
     return pixels
 
@@ -28,11 +28,9 @@ def saturation_histogram(image, hsvize=True):
     plt.show()
 
 
-def errors(mask, image):
-    result = image.copy()
+def errors(deposit, mask, image):
 
-    deposit = mask.deposition_mask()
-    dep_masked = cv2.bitwise_and(result, result, mask=deposit)
+    dep_masked = cv2.bitwise_and(image, image, mask=deposit)
     sobel = mask.sobel_mask(dep_masked)  # Get sobel mask
     edges = mask.edge_sobel_mask(dep_masked)
 
@@ -46,21 +44,24 @@ def show_errors(mask, image):
 
     green = np.zeros(result.shape, np.uint8)
     green[:] = (57, 255, 20)
-    green_mask = cv2.bitwise_and(green, green, mask=mask)
+    dst = cv2.bitwise_and(green, result, mask=mask)
 
-    dst = cv2.bitwise_or(result, green_mask)
     return dst
 
 
 def percent_imp(errors_mask, original_mask, image):
     result = image.copy()
-    errors_masked = cv2.bitwise_and(result, result, mask=errors_mask)
-    dep_masked = cv2.bitwise_and(result, result, mask=original_mask)
+    white= np.zeros(result.shape, np.uint8)
+    white[:] = (255, 255, 255)
+    errors_masked = cv2.bitwise_and(white, white, mask=errors_mask)
+    dep_masked = cv2.bitwise_and(white, white, mask=original_mask)
 
-    final_size = mask_size(errors_masked)
+    error_size = mask_size(errors_masked)
     deposit_size = mask_size(dep_masked)
-    ratio = (final_size) / deposit_size
+    ratio = error_size / deposit_size
 
     ratio_string = "{0:.5f}%".format(ratio * 100)
+
+
 
     return ratio_string
