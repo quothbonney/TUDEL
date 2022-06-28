@@ -40,6 +40,7 @@ L2 = Label(F1, text="Modified", height="25", width="52", bd=0.5, relief="solid")
 L2.grid(row=1, column=1)
 global_return = 0
 
+is_auto_masked = None
 
 def update_image(dst):
     global_return = dst
@@ -143,8 +144,6 @@ def analyze_buttons():
 
 
 
-    cv2.imshow('errors2', error_mask)
-    cv2.imshow('original2', original_mask)
     ratio: str = analysis.percent_imp(error_mask, original_mask, global_return)
 
     F2 = Frame(tk)
@@ -187,28 +186,21 @@ def calibrate_img(*args):
 def analyze_img(*args):
     global global_return
     global option_variable
+    global is_auto_masked
 
     if option_variable.get() == 'Select Type':
         messagebox.showerror('TUDEL', 'Error: Please select film type')
 
-    # img = main.main(original, option_variable.get())
+    if is_auto_masked == None:
+        messagebox.showerror('TUDEL', 'Error: No mask selected.')
 
     mask = Mask(global_return, option_variable.get())
     dep_masked = mask.deposition_mask()
-    error_mask = analysis.errors(mask, global_return, dep_masked)
+    error_mask = analysis.errors(amask=mask, deposit=global_return, image=dep_masked, is_auto=is_auto_masked)
     dst = analysis.show_errors(error_mask, global_return)
-
+    update_image(dst)
 
     global_return = dst
-    im = Image.fromarray(dst)
-    im.thumbnail((360, 360))
-    imgtk3 = ImageTk.PhotoImage(image=im)
-
-    L2 = Label(F1, image=imgtk3)
-    L2.image = imgtk3
-
-    L2.grid(row=1, column=1)
-    saveBTN.config(state="normal", cursor="hand2")
 
 
 def mask_img(*args):
@@ -270,10 +262,14 @@ def dimension_button():
 
 
 def mask_button():
+    global is_auto_masked
+    is_auto_masked = True
     threading.Thread(target=mask_img).start()
 
 def manual_mask_button():
     global global_return
+    global is_auto_masked
+    is_auto_masked = False
 
     left, top, right, bottom = selection.main(global_return)
 
@@ -340,6 +336,16 @@ option_variable = StringVar(tk)
 option_variable.set('Select Type')
 w = OptionMenu(tk, option_variable, *choices)
 w.place(x=800, y=35)
+
+
+# Menu Bar
+menubar = Menu(tk)
+filemenu = Menu(menubar, tearoff=0)
+filemenu.add_command(label="Open", command=trgt2)
+filemenu.add_command(label="Save As", command=trgt3)
+
+
+tk.config(menu=menubar)
 
 
 def callback(url):
