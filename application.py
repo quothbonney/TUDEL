@@ -266,12 +266,28 @@ def mask_button():
     is_auto_masked = True
     threading.Thread(target=mask_img).start()
 
+
 def manual_mask_button():
     global global_return
     global is_auto_masked
     is_auto_masked = False
 
-    left, top, right, bottom = selection.main(global_return)
+    # Get the ratio between width and height in order to resize from size of one side
+    shp: tuple = global_return.shape
+    height_width_ratio = shp[0]/shp[1]
+    size = 900
+    dim = (size, int(size * height_width_ratio))
+
+    # Get the points of the selected area
+    resized = cv2.resize(global_return, dim, interpolation=cv2.INTER_AREA)
+    left, top, right, bottom = selection.main(resized)
+
+    rescaling_factor = shp[1]/size
+    print(rescaling_factor)
+    left = int(left * rescaling_factor)
+    top = int(top * rescaling_factor)
+    right = int(right * rescaling_factor)
+    bottom = int(bottom * rescaling_factor)
 
     # Ensure that it won't slice backwards
     if top > bottom:
@@ -283,6 +299,7 @@ def manual_mask_button():
     cropped = global_return[top:bottom, left:right]
 
     global_return = cropped
+
     update_image(global_return)
 
 def trgt2():
