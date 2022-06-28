@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import sys
+from tkinter import messagebox
 
 counter = 0
 
@@ -40,15 +41,8 @@ def calibrate(img, value):
 
     b_val = red_brightness(image)
     if b_val < 110:
-        s = input("The image is too dark. It cannot be calibrated without artifacts. "
-                  "Continue anyways? (y/n) ")
-        if s == "n":
-            sys.exit()
-        elif s == "y":
-            return img
-        else:
-            print(s + " is not recognized.")
-            sys.exit()
+        messagebox.showerror('TUDEL', "ERROR: Cannot Calibrate Image")
+        return image
 
     while b_val < 165:
         counter += 1

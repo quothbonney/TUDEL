@@ -28,14 +28,15 @@ def saturation_histogram(image, hsvize=True):
     plt.show()
 
 
-def errors(deposit, mask, image):
-
+def errors(deposit, amask, image, is_auto=True):
     dep_masked = cv2.bitwise_and(image, image, mask=deposit)
-    sobel = mask.sobel_mask(dep_masked)  # Get sobel mask
-    edges = mask.edge_sobel_mask(dep_masked)
-
-    final_mask = cv2.threshold(sobel-edges, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
-
+    sobel = amask.sobel_mask(dep_masked)  # Get sobel mask
+    edges = amask.edge_sobel_mask(dep_masked)
+    if is_auto:
+        final_mask = cv2.threshold(sobel-edges, 120, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
+    else:
+        final_mask = cv2.threshold(sobel, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
+        print("Manual Mask Confirmed")
     return final_mask
 
 

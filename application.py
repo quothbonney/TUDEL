@@ -9,13 +9,19 @@ from tkinter import messagebox
 from features.calibrate import calibrate
 from features import dimensions, selection, analysis
 from features.mask import Mask
+import json
 
 # Init
 tk = Tk()
+
+f = open("src/spectrum.json")
+bound_map = json.load(f)
+
 windowWidth = tk.winfo_reqwidth()
 windowHeight = tk.winfo_reqheight()
 positionRight = int(tk.winfo_screenwidth() / 3 - windowWidth / 3)
 positionDown = int(tk.winfo_screenheight() / 3 - windowHeight / 1)
+
 tk.geometry(f"800x510+{positionRight}+{positionDown}")
 tk.resizable(width=False, height=False)
 
@@ -34,6 +40,7 @@ L2 = Label(F1, text="Modified", height="25", width="52", bd=0.5, relief="solid")
 L2.grid(row=1, column=1)
 global_return = 0
 
+is_auto_masked = None
 
 def update_image(dst):
     global_return = dst
@@ -137,8 +144,6 @@ def analyze_buttons():
 
 
 
-    cv2.imshow('errors2', error_mask)
-    cv2.imshow('original2', original_mask)
     ratio: str = analysis.percent_imp(error_mask, original_mask, global_return)
 
     F2 = Frame(tk)
@@ -181,28 +186,21 @@ def calibrate_img(*args):
 def analyze_img(*args):
     global global_return
     global option_variable
+    global is_auto_masked
 
     if option_variable.get() == 'Select Type':
         messagebox.showerror('TUDEL', 'Error: Please select film type')
 
-    # img = main.main(original, option_variable.get())
+    if is_auto_masked == None:
+        messagebox.showerror('TUDEL', 'Error: No mask selected.')
 
     mask = Mask(global_return, option_variable.get())
     dep_masked = mask.deposition_mask()
-    error_mask = analysis.errors(mask, global_return, dep_masked)
+    error_mask = analysis.errors(amask=mask, deposit=global_return, image=dep_masked, is_auto=is_auto_masked)
     dst = analysis.show_errors(error_mask, global_return)
-
+    update_image(dst)
 
     global_return = dst
-    im = Image.fromarray(dst)
-    im.thumbnail((360, 360))
-    imgtk3 = ImageTk.PhotoImage(image=im)
-
-    L2 = Label(F1, image=imgtk3)
-    L2.image = imgtk3
-
-    L2.grid(row=1, column=1)
-    saveBTN.config(state="normal", cursor="hand2")
 
 
 def mask_img(*args):
@@ -264,12 +262,32 @@ def dimension_button():
 
 
 def mask_button():
+    global is_auto_masked
+    is_auto_masked = True
     threading.Thread(target=mask_img).start()
+
 
 def manual_mask_button():
     global global_return
+    global is_auto_masked
+    is_auto_masked = False
 
-    left, top, right, bottom = selection.main(global_return)
+    # Get the ratio between width and height in order to resize from size of one side
+    shp: tuple = global_return.shape
+    height_width_ratio = shp[0]/shp[1]
+    size = 900
+    dim = (size, int(size * height_width_ratio))
+
+    # Get the points of the selected area
+    resized = cv2.resize(global_return, dim, interpolation=cv2.INTER_AREA)
+    left, top, right, bottom = selection.main(resized)
+
+    rescaling_factor = shp[1]/size
+    print(rescaling_factor)
+    left = int(left * rescaling_factor)
+    top = int(top * rescaling_factor)
+    right = int(right * rescaling_factor)
+    bottom = int(bottom * rescaling_factor)
 
     # Ensure that it won't slice backwards
     if top > bottom:
@@ -281,6 +299,7 @@ def manual_mask_button():
     cropped = global_return[top:bottom, left:right]
 
     global_return = cropped
+
     update_image(global_return)
 
 def trgt2():
@@ -329,14 +348,25 @@ hsv_btn.config(cursor="hand2")
 hsv_btn.place(x=800, y=285)
 
 # Choice button
-choices = ['PbO2', 'PbI2', 'PEDOT']
+choices = [choice for choice in bound_map]
 option_variable = StringVar(tk)
 option_variable.set('Select Type')
 w = OptionMenu(tk, option_variable, *choices)
 w.place(x=800, y=35)
 
 
+# Menu Bar
+menubar = Menu(tk)
+filemenu = Menu(menubar, tearoff=0)
+filemenu.add_command(label="Open", command=trgt2)
+filemenu.add_command(label="Save As", command=trgt3)
+
+
+tk.config(menu=menubar)
+
+
 def callback(url):
     webbrowser.open_new(url)
 
 tk.mainloop()
+f.close()

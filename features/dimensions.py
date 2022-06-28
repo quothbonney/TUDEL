@@ -1,25 +1,10 @@
 import cv2
 import numpy as np
 import sys
+import json
 
-bound_map = {
-    "PbO2": [
-        [8, 50, 20],
-        [40, 255, 150],
-    ],
-    "PEDOT": [
-        [90, 50, 20],
-         [120, 255, 205],
-    ],
-    "PbI2": [
-        [20, 50, 20],
-         [35, 255, 205]
-    ],
-    "Perovskite": [
-        [15, 30, 0],
-        [80, 255, 255]
-    ]
-}
+f = open("src/spectrum.json")
+bound_map = json.load(f)
 
 
 # Convert image to grayscale
@@ -51,3 +36,5 @@ if __name__ == '__main__':
 
     b = size(image1)
     print(f"Height: {b} mm")
+
+f.close()
