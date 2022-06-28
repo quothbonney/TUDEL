@@ -143,9 +143,10 @@ def analyze_buttons():
 
 
 
-
-    ratio: str = analysis.percent_imp(error_mask, original_mask, global_return)
-
+    try:
+        ratio: str = analysis.percent_imp(error_mask, original_mask, global_return)
+    except ZeroDivisionError:
+        ratio: str = "0.0000"
     F2 = Frame(tk)
     F2.place(x=900, y=70)
     lbl = Label(F2, text=f"Percent Imperfection: {ratio}")
