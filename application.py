@@ -154,7 +154,7 @@ def analyze_buttons():
     lbl = Label(F2, text=f"Percent Imperfection: {ratio}")
     lbl.grid(row=0, column=0, sticky=W, padx="30")
 
-    dst = analysis.show_errors(error_mask, original)
+    dst = analysis.show_errors(error_mask, global_return)
     update_image(dst)
 
 
