@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+from features.mask import Mask
 
 
 def mask_size(mask):
@@ -28,12 +29,12 @@ def saturation_histogram(image, hsvize=True):
     plt.show()
 
 
-def errors(deposit, amask, image, is_auto=True):
-    dep_masked = cv2.bitwise_and(image, image, mask=deposit)
-    sobel = amask.sobel_mask(dep_masked)  # Get sobel mask
-    edges = amask.edge_sobel_mask(dep_masked)
+def errors(type, deposit, is_auto):
+    mask = Mask(type, deposit)
+    sobel = mask.sobel_mask()  # Get sobel mask
+    edges = mask.edge_sobel_mask()
     if is_auto:
-        final_mask = cv2.threshold(sobel-edges, 120, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
+        final_mask = cv2.threshold(sobel-edges, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
     else:
         final_mask = cv2.threshold(sobel, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
         print("Manual Mask Confirmed")
@@ -41,11 +42,10 @@ def errors(deposit, amask, image, is_auto=True):
 
 
 def show_errors(mask, image):
-    result = image.copy()
-
-    green = np.zeros(result.shape, np.uint8)
+    green = np.zeros(image.shape, np.uint8)
     green[:] = (57, 255, 20)
-    dst = cv2.bitwise_and(green, result, mask=mask)
+    green_mask = cv2.bitwise_or(green, image, mask=mask)
+    dst = cv2.addWeighted(green_mask, 0.5, image, 0.7, 0)
 
     return dst
 
