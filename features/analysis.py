@@ -63,6 +63,4 @@ def percent_imp(errors_mask, original_mask, image):
 
     ratio_string = "{0:.5f}%".format(ratio * 100)
 
-
-
     return ratio_string
