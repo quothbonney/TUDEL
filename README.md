@@ -13,6 +13,15 @@ As of version 0.4, the tools are now available as a GUI that is easy to use. How
 it still requires the dependencies covered in the following section. This will hopefully be fixed in the next major version.
 
 ## Getting Started
+### Easy Install (.exe)
+- The easiest method of installation for people who are not interested in the source code is to download the most recent .exe file under the releases tab.
+- As of version 0.4, there is no installer, so Windows will wisely warn you about the dangers of executables.
+- The compiled .exe can run immediately with no other dependencies.
+
+For those that are weary of executables, I recommend the following build process.
+
+### Build TUDEL
+
 ### Dependencies
 - Python >3.8
 - NumPy
@@ -23,6 +32,8 @@ it still requires the dependencies covered in the following section. This will h
 
 All dependency versions are listed in the `requirements.txt` file and can be easily installed with
 `pip install -r requirements.txt` from the source folder in the command line if you have Python adequately installed.
+If you are encountering an `ImportError` after installing requirements, try to manually install the latest
+version of OpenCV-Python with `pip install opencv-python` and manually install all of the other troublesome dependencies
 
 ### Download
 - Git clone the repository onto your machine

@@ -46,6 +46,7 @@ working_mask = [0]
 
 def update_image(dst):
     global global_return
+
     global_return = dst
     im = Image.fromarray(dst)
     im.thumbnail((360, 360))
@@ -56,6 +57,7 @@ def update_image(dst):
 
     L2.grid(row=1, column=1)
     saveBTN.config(state="normal", cursor="hand2")
+
 
 # Image Select and Save
 def Image_Select():
@@ -310,6 +312,13 @@ def manual_mask_button():
 
     update_image(global_return)
 
+
+def reset():
+    global global_return, original
+    global_return = original
+    update_image(global_return)
+
+
 def trgt2():
     threading.Thread(target=Image_Select).start()
 
@@ -361,6 +370,11 @@ option_variable = StringVar(tk)
 option_variable.set('Select Type')
 w = OptionMenu(tk, option_variable, *choices)
 w.place(x=800, y=35)
+
+# Reset button
+reset_btn = Button(tk, text="Reset", width=9, command=reset)
+reset_btn.config(cursor="hand2")
+reset_btn.place(x=800, y=450)
 
 
 # Menu Bar
