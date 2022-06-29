@@ -11,6 +11,7 @@ from features import dimensions, selection, analysis
 from features.mask import Mask
 import json
 
+original = 0
 # Init
 tk = Tk()
 
@@ -41,8 +42,10 @@ L2.grid(row=1, column=1)
 global_return = 0
 
 is_auto_masked = None
+working_mask = [0]
 
 def update_image(dst):
+    global global_return
     global_return = dst
     im = Image.fromarray(dst)
     im.thumbnail((360, 360))
@@ -133,15 +136,14 @@ def hsv_buttons():
 def analyze_buttons():
     global global_return
     global option_variable
+    global original
 
     if option_variable.get() == 'Select Type':
         messagebox.showerror('TUDEL', 'Error: Please select film type')
 
-    mask = Mask(global_return, option_variable.get())
-    original_mask = mask.deposition_mask()
-    error_mask = analysis.errors(original_mask, mask, global_return)
-
-
+    mask = Mask(option_variable.get(), global_return)
+    original_mask = mask.deposition_mask(global_return)
+    error_mask = analyze_img()
 
     try:
         ratio: str = analysis.percent_imp(error_mask, original_mask, global_return)
@@ -152,8 +154,9 @@ def analyze_buttons():
     lbl = Label(F2, text=f"Percent Imperfection: {ratio}")
     lbl.grid(row=0, column=0, sticky=W, padx="30")
 
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    dst = analysis.show_errors(error_mask, original)
+    update_image(dst)
+
 
 def write_file():
     global global_return
@@ -191,29 +194,32 @@ def analyze_img(*args):
 
     if option_variable.get() == 'Select Type':
         messagebox.showerror('TUDEL', 'Error: Please select film type')
+        return
 
     if is_auto_masked == None:
         messagebox.showerror('TUDEL', 'Error: No mask selected.')
+        return
 
-    mask = Mask(global_return, option_variable.get())
-    dep_masked = mask.deposition_mask()
-    error_mask = analysis.errors(amask=mask, deposit=global_return, image=dep_masked, is_auto=is_auto_masked)
-    dst = analysis.show_errors(error_mask, global_return)
-    update_image(dst)
+    print(is_auto_masked)
+    error_mask = analysis.errors(option_variable.get(), global_return, is_auto=is_auto_masked)
 
-    global_return = dst
+    return error_mask
+
+    cv2.waitKey(0)
 
 
 def mask_img(*args):
     global global_return
     global option_variable
+    global working_mask
 
-    mask = Mask(global_return, option_variable.get())
-    original_mask = mask.deposition_mask()
+    mask = Mask(option_variable.get(), global_return)
+    original_mask = mask.deposition_mask(global_return)
+    working_mask = original_mask
 
     dep_masked = cv2.bitwise_and(global_return, global_return, mask=original_mask)
     update_image(dep_masked)
-
+    global_return = dep_masked
     return dep_masked
 
 
@@ -254,7 +260,6 @@ def calibrate_button():
 
 
 def analysis_button():
-    threading.Thread(target=analyze_img).start()
     threading.Thread(target=analyze_buttons).start()
 
 
@@ -271,6 +276,7 @@ def mask_button():
 def manual_mask_button():
     global global_return
     global is_auto_masked
+    global working_mask
     is_auto_masked = False
 
     # Get the ratio between width and height in order to resize from size of one side
@@ -299,6 +305,7 @@ def manual_mask_button():
     # Numpy slicing crop that I refuse to believe I'm smart enough to have thought of myself
     cropped = global_return[top:bottom, left:right]
 
+    working_mask = cv2.cvtColor(cropped, cv2.COLOR_RGB2HSV)
     global_return = cropped
 
     update_image(global_return)
