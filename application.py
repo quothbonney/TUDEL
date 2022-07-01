@@ -10,6 +10,8 @@ from features.calibrate import calibrate
 from features import dimensions, selection, analysis
 from features.mask import Mask
 import json
+import os
+
 
 original = 0
 # Init
@@ -376,19 +378,45 @@ reset_btn = Button(tk, text="Reset", width=9, command=reset)
 reset_btn.config(cursor="hand2")
 reset_btn.place(x=800, y=450)
 
+#File Menu Only Buttons
+def new_window():
+    os.system("python3 ./application.py")
 
-# Menu Bar
+
+def donothing():
+   filewin = Toplevel(root)
+   button = Button(filewin, text="Do nothing button")
+   button.pack()
+   
 menubar = Menu(tk)
 filemenu = Menu(menubar, tearoff=0)
+filemenu.add_command(label="New Window", command=new_window)
 filemenu.add_command(label="Open", command=trgt2)
-filemenu.add_command(label="Save As", command=trgt3)
+filemenu.add_command(label="Save as", command=trgt3)
+filemenu.add_command(label="Close", command=tk.quit)
 
+filemenu.add_separator()
+
+filemenu.add_command(label="Exit", command=tk.quit)
+menubar.add_cascade(label="File", menu=filemenu)
+editmenu = Menu(menubar, tearoff=0)
+editmenu.add_command(label="Undo", command=donothing)
+
+editmenu.add_separator()
+
+editmenu.add_command(label="Cut", command=donothing)
+editmenu.add_command(label="Copy", command=donothing)
+editmenu.add_command(label="Paste", command=donothing)
+editmenu.add_command(label="Delete", command=donothing)
+editmenu.add_command(label="Select All", command=donothing)
+
+menubar.add_cascade(label="Edit", menu=editmenu)
+helpmenu = Menu(menubar, tearoff=0)
+helpmenu.add_command(label="Help Index", command=donothing)
+helpmenu.add_command(label="About...", command=donothing)
+menubar.add_cascade(label="Help", menu=helpmenu)
 
 tk.config(menu=menubar)
-
-
-def callback(url):
-    webbrowser.open_new(url)
 
 tk.mainloop()
 f.close()
