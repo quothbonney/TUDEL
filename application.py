@@ -10,10 +10,13 @@ from features.calibrate import calibrate
 from features import dimensions, selection, analysis
 from features.mask import Mask
 import json
+import sys
 
 original = 0
 # Init
 tk = Tk()
+tk.tk.call('tk', 'scaling', 2.0)
+
 
 f = open("src/spectrum.json")
 bound_map = json.load(f)
@@ -45,19 +48,19 @@ is_auto_masked = None
 working_mask = [0]
 
 def update_image(dst):
-    global global_return
-
+    global global_return, L2
+    L2.config(image=None)
+    L2.image = None
     global_return = dst
     im = Image.fromarray(dst)
     im.thumbnail((360, 360))
     imgtk3 = ImageTk.PhotoImage(image=im)
-
     L2 = Label(F1, image=imgtk3)
     L2.image = imgtk3
-
     L2.grid(row=1, column=1)
     saveBTN.config(state="normal", cursor="hand2")
 
+    
 
 # Image Select and Save
 def Image_Select():
