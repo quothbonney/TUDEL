@@ -9,16 +9,18 @@ from tkinter import messagebox
 from features.calibrate import calibrate
 from features import dimensions, selection, analysis
 from features.mask import Mask
+from src.state import ApplicationState
 import json
 import os
 import sys
 
 image_is_open = False
-original = 0
 # Init
 tk = Tk()
 tk.tk.call('tk', 'scaling', 2.0)
 
+state = ApplicationState()
+state.original = 0
 
 f = open("src/spectrum.json")
 bound_map = json.load(f)
@@ -44,16 +46,17 @@ l2 = Label(F1, text="Modified Image", font="bold")
 l2.grid(row=0, column=1)
 L2 = Label(F1, text="Modified", height="25", width="52", bd=0.5, relief="solid")
 L2.grid(row=1, column=1)
-global_return = 0
+state.present = 0
 
 is_auto_masked = None
 working_mask = [0]
 
 def update_image(dst):
-    global global_return, L2
+    global L2
+
     L2.config(image=None)
     L2.image = None
-    global_return = dst
+    state.present = dst
     im = Image.fromarray(dst)
     im.thumbnail((360, 360))
     imgtk3 = ImageTk.PhotoImage(image=im)
@@ -68,10 +71,8 @@ def update_image(dst):
 def Image_Select():
     global hsv
     global tkimage
-    global original
     global img_rgb
     global imageselect
-    global global_return
 
     filemenu.entryconfig("Save as", state="normal")
     imageselect = filedialog.askopenfilename(initialdir="Desktop",
@@ -82,8 +83,8 @@ def Image_Select():
     print(imageselect)
 
     try:
-        original = cv2.imread(imageselect)
-        global_return = original
+        state.original = cv2.imread(imageselect)
+        state.present = state.original
 
         im = Image.open(imageselect)
         im.thumbnail((360, 360))
@@ -135,26 +136,24 @@ def hsv_buttons():
         F3.grid_forget()
         F3.destroy()
     F2 = Frame(tk)
-    F2.place(x=900, y=50)
+    F2.place(x=900, y=50) 
 
     l_h_lbl = Label(F2, text="Calibration Complete.")
     l_h_lbl.grid(row=0, column=0, sticky=W, padx="30")
 
 
 def analyze_buttons():
-    global global_return
-    global option_variable
-    global original
+    global state
 
-    if option_variable.get() == 'Select Type':
+    if state.type.get() == 'Select Type':
         messagebox.showerror('TUDEL', 'Error: Please select film type')
 
-    mask = Mask(option_variable.get(), global_return)
-    original_mask = mask.deposition_mask(global_return)
-    error_mask = analyze_img()
+    mask = Mask(state.type.get(), state.present)
+    state.original_mask = mask.deposition_mask(state.present)
+    state.working_mask = analyze_img()
 
     try:
-        ratio: str = analysis.percent_imp(error_mask, original_mask, global_return)
+        ratio: str = analysis.percent_imp(state.working_mask, state.original_mask, state.present)
     except ZeroDivisionError:
         ratio: str = "0.0000"
     F2 = Frame(tk)
@@ -162,13 +161,13 @@ def analyze_buttons():
     lbl = Label(F2, text=f"Percent Imperfection: {ratio}")
     lbl.grid(row=0, column=0, sticky=W, padx="30")
 
-    dst = analysis.show_errors(error_mask, global_return)
+    dst = analysis.show_errors(state.working_mask, state.present)
     update_image(dst)
 
 
 def write_file():
-    global global_return
-    ret = cv2.cvtColor(global_return, cv2.COLOR_BGR2RGB)
+    global state
+    ret = cv2.cvtColor(state.present, cv2.COLOR_BGR2RGB)
 
     filename = filedialog.asksaveasfilename(initialdir="Desktop", filetypes=[("PNG file", "*.png")])
     if not filename:
@@ -180,11 +179,11 @@ def write_file():
 
 
 def calibrate_img(*args):
-    global global_return
+    global state
 
-    global_return = calibrate(global_return, 2)
+    state.present = calibrate(state.present, 2)
 
-    im = Image.fromarray(global_return)
+    im = Image.fromarray(state.present)
     im.thumbnail((360, 360))
     imgtk3 = ImageTk.PhotoImage(image=im)
 
@@ -196,56 +195,48 @@ def calibrate_img(*args):
 
 
 def analyze_img(*args):
-    global global_return
-    global option_variable
-    global is_auto_masked
+    global state
 
-    if option_variable.get() == 'Select Type':
+    if state.type.get() == 'Select Type':
         messagebox.showerror('TUDEL', 'Error: Please select film type')
         return
 
-    if is_auto_masked == None:
+    if state.is_auto_masked == None:
         messagebox.showerror('TUDEL', 'Error: No mask selected.')
         return
 
-    print(is_auto_masked)
-    error_mask = analysis.errors(option_variable.get(), global_return, is_auto=is_auto_masked)
+    state.working_mask = analysis.errors(state.type.get(), state.present, is_auto=state.is_auto_masked)
 
-    return error_mask
+    return state.working_mask
 
-    cv2.waitKey(0)
 
 
 def mask_img(*args):
-    global global_return
-    global option_variable
-    global working_mask
+    global state
+    print(state.type.get())
+    mask = Mask(state.type.get(), state.present)
+    state.original_mask = mask.deposition_mask(state.present)
 
-    mask = Mask(option_variable.get(), global_return)
-    original_mask = mask.deposition_mask(global_return)
-    working_mask = original_mask
-
-    dep_masked = cv2.bitwise_and(global_return, global_return, mask=original_mask)
+    dep_masked = cv2.bitwise_and(state.present, state.present, mask=state.original_mask)
     update_image(dep_masked)
-    global_return = dep_masked
+    state.present = dep_masked
     return dep_masked
 
 
 def dimension_img(*args):
-    global option_variable
 
-    if option_variable.get() == 'Select Type':
+    if state.type.get() == 'Select Type':
         messagebox.showerror('TUDEL', 'Error: Please select film type')
 
-    width = dimensions.size(original, option_variable.get())
+    width = dimensions.size(state.original, state.type.get())
     F2 = Frame(tk)
     F2.place(x=900, y=90)
 
     a = Label(F2, text=f"Width: {width}px")
     a.grid(row=0, column=0, sticky=W, padx="30")
 
-    new = cv2.rotate(original, cv2.ROTATE_90_CLOCKWISE)
-    height = dimensions.size(new, option_variable.get())
+    new = cv2.rotate(state.original, cv2.ROTATE_90_CLOCKWISE)
+    height = dimensions.size(new, state.type.get())
     F3 = Frame(tk)
     F3.place(x=900, y=110)
     b = Label(F3, text=f"Height: {height}px")
@@ -276,25 +267,23 @@ def dimension_button():
 
 
 def mask_button():
-    global is_auto_masked
-    is_auto_masked = True
+    global state
+    state.is_auto_masked = True
     threading.Thread(target=mask_img).start()
 
 
 def manual_mask_button():
-    global global_return
-    global is_auto_masked
-    global working_mask
-    is_auto_masked = False
+    global state 
+    state.is_auto_masked = False
 
     # Get the ratio between width and height in order to resize from size of one side
-    shp: tuple = global_return.shape
+    shp: tuple = state.present.shape
     height_width_ratio = shp[0]/shp[1]
     size = 900
     dim = (size, int(size * height_width_ratio))
 
     # Get the points of the selected area
-    resized = cv2.resize(global_return, dim, interpolation=cv2.INTER_AREA)
+    resized = cv2.resize(state.present, dim, interpolation=cv2.INTER_AREA)
     left, top, right, bottom = selection.main(resized)
 
     rescaling_factor = shp[1]/size
@@ -311,18 +300,17 @@ def manual_mask_button():
         right, left = left, right
 
     # Numpy slicing crop that I refuse to believe I'm smart enough to have thought of myself
-    cropped = global_return[top:bottom, left:right]
+    cropped = state.present[top:bottom, left:right]
 
     working_mask = cv2.cvtColor(cropped, cv2.COLOR_RGB2HSV)
-    global_return = cropped
+    state.present = cropped
 
-    update_image(global_return)
+    update_image(state.present)
 
 
 def reset():
-    global global_return, original
-    global_return = original
-    update_image(global_return)
+    state.present = state.original
+    update_image(state.present)
 
 
 def trgt2():
@@ -372,9 +360,9 @@ hsv_btn.place(x=800, y=285)
 
 # Choice button
 choices = [choice for choice in bound_map]
-option_variable = StringVar(tk)
-option_variable.set('Select Type')
-w = OptionMenu(tk, option_variable, *choices)
+state.type = StringVar(tk)
+state.type.set('Select Type')
+w = OptionMenu(tk, state.type, *choices)
 w.place(x=800, y=35)
 
 # Reset button
