@@ -10,11 +10,8 @@ from features.calibrate import calibrate
 from features import dimensions, selection, analysis
 from features.mask import Mask
 import json
-<<<<<<< HEAD
 import os
-=======
 import sys
->>>>>>> master
 
 image_is_open = False
 original = 0
@@ -76,8 +73,7 @@ def Image_Select():
     global imageselect
     global global_return
 
-    image_is_open = True
-
+    filemenu.entryconfig("Save as", state="normal")
     imageselect = filedialog.askopenfilename(initialdir="Desktop",
                                              filetypes=[('Image files', '*.png'), ('Image files', '*.jpg')])
 
@@ -404,10 +400,9 @@ filemenu.add_command(label="Save as", command=trgt3)
 filemenu.add_command(label="Close", command=tk.quit)
 
 filemenu.add_separator()
-if image_is_open:
-    menubar["File"].entryconfig("Save As", state="normal")
-else:
-    menubar["File"].entryconfig("Save As", sate="disabled")
+
+# Save as is disabled by default to avoid error
+filemenu.entryconfig("Save as", state="disabled")
 
 filemenu.add_command(label="Exit", command=tk.quit)
 menubar.add_cascade(label="File", menu=filemenu)
