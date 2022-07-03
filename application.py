@@ -74,7 +74,10 @@ def Image_Select():
     global img_rgb
     global imageselect
 
+    # Open menubars
     filemenu.entryconfig("Save as", state="normal")
+    menubar.entryconfig("Edit", state="normal")
+
     imageselect = filedialog.askopenfilename(initialdir="Desktop",
                                              filetypes=[('Image files', '*.png'), ('Image files', '*.jpg')])
 
@@ -213,7 +216,11 @@ def analyze_img(*args):
 
 def mask_img(*args):
     global state
-    print(state.type.get())
+    
+    if state.type.get() == 'Select Type':
+        messagebox.showerror('TUDEL', 'Error: Please select film type')
+        return
+
     mask = Mask(state.type.get(), state.present)
     state.original_mask = mask.deposition_mask(state.present)
 
@@ -309,8 +316,7 @@ def manual_mask_button():
 
 
 def reset():
-    state.present = state.original
-    update_image(state.present)
+    update_image(state.original)
 
 
 def trgt2():
@@ -381,11 +387,12 @@ def donothing():
    button.pack()
    
 menubar = Menu(tk)
+
+# File bar
 filemenu = Menu(menubar, tearoff=0)
 filemenu.add_command(label="New Window", command=new_window)
 filemenu.add_command(label="Open", command=trgt2)
 filemenu.add_command(label="Save as", command=trgt3)
-filemenu.add_command(label="Close", command=tk.quit)
 
 filemenu.add_separator()
 
@@ -394,22 +401,33 @@ filemenu.entryconfig("Save as", state="disabled")
 
 filemenu.add_command(label="Exit", command=tk.quit)
 menubar.add_cascade(label="File", menu=filemenu)
+
+# Edit bar
 editmenu = Menu(menubar, tearoff=0)
-editmenu.add_command(label="Undo", command=donothing)
+editmenu.add_command(label="Reset", command=reset)
 
 editmenu.add_separator()
 
-editmenu.add_command(label="Cut", command=donothing)
-editmenu.add_command(label="Copy", command=donothing)
-editmenu.add_command(label="Paste", command=donothing)
-editmenu.add_command(label="Delete", command=donothing)
-editmenu.add_command(label="Select All", command=donothing)
+editmenu.add_command(label="Calibrate", command=calibrate_button)
+editmenu.add_command(label="Dimension", command=dimension_button)
+
+editmenu.add_separator()
+
+editmenu.add_command(label="Auto Mask", command=mask_button)
+editmenu.add_command(label="Manual Mask", command=manual_mask_button)
 
 menubar.add_cascade(label="Edit", menu=editmenu)
-helpmenu = Menu(menubar, tearoff=0)
-helpmenu.add_command(label="Help Index", command=donothing)
-helpmenu.add_command(label="About...", command=donothing)
-menubar.add_cascade(label="Help", menu=helpmenu)
+menubar.entryconfig("Edit", state="disabled")
+
+# Analysis bar
+analysisbar = Menu(menubar, tearoff=0)
+
+analysisbar.add_command(label="Imp. Analysis", command=analysis_button)
+
+
+menubar.add_cascade(label="Analysis", menu=analysisbar)
+menubar.entryconfig("Analysis", state="disabled")
+
 
 tk.config(menu=menubar)
 
