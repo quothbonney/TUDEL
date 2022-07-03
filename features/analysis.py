@@ -2,6 +2,9 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from features.mask import Mask
+from tkinter import *
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 
 
 def mask_size(mask):
@@ -64,3 +67,40 @@ def percent_imp(errors_mask, original_mask, image):
     ratio_string = "{0:.5f}%".format(ratio * 100)
 
     return ratio_string
+
+
+def line_analysis(mask): 
+    mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+    thresh = cv2.threshold(mask, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
+    
+    widths = []
+    for row in thresh:
+        width = cv2.countNonZero(row)
+        if width > 10:
+            widths.append(width)
+    
+    return widths
+
+def show_line_analysis(widths):
+    window = Toplevel()
+    window.title("Line by Line Analysis")
+    window.geometry('%sx%s' % (600, 600))
+    window.configure(background='grey')
+
+    fig = Figure(figsize=(5,5), dpi=100) 
+    plot1 = fig.add_subplot(111) # No I don't know why.
+    plot1.plot(widths)
+    plot1.set_xlabel('Row (px)')
+    plot1.set_ylabel('Highlighted px')
+
+    canvas = FigureCanvasTkAgg(fig, master=window)
+    canvas.draw()
+
+    canvas.get_tk_widget().pack()
+
+    toolbar = NavigationToolbar2Tk(canvas, window)
+    toolbar.update()
+
+    canvas.get_tk_widget().pack()
+
+

@@ -26,7 +26,7 @@ def size(image, typestr):
     return str(round(average, 3))
 
 if __name__ == '__main__':
-
+    
     image = cv2.imread(sys.argv[2])
 
     a = size(image)
