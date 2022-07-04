@@ -322,7 +322,10 @@ def manual_mask_button():
 
 
     
-    
+def sat():
+    sats = analysis.saturation_histogram(state.present)
+    analysis.show_saturations(sats)
+
 
 def reset():
     update_image(state.original)
@@ -431,9 +434,9 @@ menubar.entryconfig("Edit", state="disabled")
 # Analysis bar
 analysisbar = Menu(menubar, tearoff=0)
 
-analysisbar.add_command(label="Imp. Analysis", command=analysis_button)
-analysisbar.add_command(label="Line Analysis", command=lines)
-
+analysisbar.add_command(label="Imperfection", command=analysis_button)
+analysisbar.add_command(label="Line by Line", command=lines)
+analysisbar.add_command(label="Saturation", command=sat)
 
 menubar.add_cascade(label="Analysis", menu=analysisbar)
 menubar.entryconfig("Analysis", state="disabled")

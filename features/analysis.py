@@ -19,17 +19,12 @@ def saturation_histogram(image, hsvize=True):
     if hsvize is True:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-    x = image.flatten()
+    channel = image[:,:,2]
+    x = channel.flatten()
 
-    filter = x > 50
+    fil = [p for p in x if p > 10]
 
-    fil = x[filter]
-
-    counts, bins = np.histogram(fil, density=True)
-    plt.hist(bins[:-1], bins, weights=counts)
-    plt.xlabel('Saturation')
-    plt.ylabel('Probability')
-    plt.show()
+    return fil
 
 
 def errors(type, deposit, is_auto):
@@ -81,6 +76,23 @@ def line_analysis(mask):
     
     return widths
 
+
+def save(widths):
+    txt_content = ""
+    for w in widths:
+        point = str(w)
+        txt_content += point + "\n"
+
+    fob=filedialog.asksaveasfile(filetypes=[('text file','*.txt')],
+        defaultextension='.txt',initialdir='D:\\my_data\\my_html',
+        mode='w')
+    try:
+        fob.write(txt_content)
+        fob.close()
+    except :
+        print (" There is an error...")
+
+
 def show_line_analysis(widths):
     window = Toplevel()
     window.title("Line by Line Analysis")
@@ -96,11 +108,48 @@ def show_line_analysis(widths):
     canvas = FigureCanvasTkAgg(fig, master=window)
     canvas.draw()
 
+    btn = Button(window, text="Save Data", width=13, command=lambda: save(widths))
+    btn.place(x=20, y=20)
+
+
     canvas.get_tk_widget().pack()
 
     toolbar = NavigationToolbar2Tk(canvas, window)
     toolbar.update()
 
     canvas.get_tk_widget().pack()
+
+ 
+
+def show_saturations(sats):
+    window = Toplevel()
+    window.title("Saturation Histogram")
+    window.geometry('%sx%s' % (600, 600))
+    window.configure(background='grey')
+
+    fig = Figure(figsize=(5,5), dpi=100) 
+    plot1 = fig.add_subplot(111) # No I don't know why. 
+  
+
+    counts, bins = np.histogram(sats, bins=20, density=True)
+    plot1.hist(bins[:-1], bins, weights=counts)
+    plot1.set_xlabel('Saturation')
+    plot1.set_ylabel('Probability')
+   
+    canvas = FigureCanvasTkAgg(fig, master=window)
+    canvas.draw()
+
+    btn = Button(window, text="Save Data", width=13, command=lambda: save(widths))
+    btn.place(x=20, y=20)
+
+
+    canvas.get_tk_widget().pack()
+
+    toolbar = NavigationToolbar2Tk(canvas, window)
+    toolbar.update()
+
+    canvas.get_tk_widget().pack()
+
+
 
 
