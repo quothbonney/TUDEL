@@ -213,6 +213,10 @@ def analyze_img(*args):
     return state.working_mask
 
 
+def lines(*args):
+    w = analysis.line_analysis(state.present)
+    analysis.show_line_analysis(w)
+
 
 def mask_img(*args):
     global state
@@ -221,6 +225,7 @@ def mask_img(*args):
         messagebox.showerror('TUDEL', 'Error: Please select film type')
         return
 
+    menubar.entryconfig("Analysis", state="normal")
     mask = Mask(state.type.get(), state.present)
     state.original_mask = mask.deposition_mask(state.present)
 
@@ -277,7 +282,7 @@ def mask_button():
     global state
     state.is_auto_masked = True
     threading.Thread(target=mask_img).start()
-
+    
 
 def manual_mask_button():
     global state 
@@ -292,7 +297,7 @@ def manual_mask_button():
     # Get the points of the selected area
     resized = cv2.resize(state.present, dim, interpolation=cv2.INTER_AREA)
     left, top, right, bottom = selection.main(resized)
-
+    
     rescaling_factor = shp[1]/size
     print(rescaling_factor)
     left = int(left * rescaling_factor)
@@ -311,8 +316,15 @@ def manual_mask_button():
 
     working_mask = cv2.cvtColor(cropped, cv2.COLOR_RGB2HSV)
     state.present = cropped
-
+    
+    menubar.entryconfig("Analysis", state="normal")
     update_image(state.present)
+
+
+    
+def sat():
+    sats = analysis.saturation_histogram(state.present)
+    analysis.show_saturations(sats)
 
 
 def reset():
@@ -422,8 +434,9 @@ menubar.entryconfig("Edit", state="disabled")
 # Analysis bar
 analysisbar = Menu(menubar, tearoff=0)
 
-analysisbar.add_command(label="Imp. Analysis", command=analysis_button)
-
+analysisbar.add_command(label="Imperfection", command=analysis_button)
+analysisbar.add_command(label="Line by Line", command=lines)
+analysisbar.add_command(label="Saturation", command=sat)
 
 menubar.add_cascade(label="Analysis", menu=analysisbar)
 menubar.entryconfig("Analysis", state="disabled")
