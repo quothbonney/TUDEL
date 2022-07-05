@@ -14,10 +14,8 @@ import json
 import os
 import sys
 
-image_is_open = False
 # Init
 tk = Tk()
-tk.tk.call('tk', 'scaling', 2.0)
 
 state = ApplicationState()
 state.original = 0

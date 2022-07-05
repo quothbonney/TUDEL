@@ -139,7 +139,7 @@ def show_saturations(sats):
     canvas = FigureCanvasTkAgg(fig, master=window)
     canvas.draw()
 
-    btn = Button(window, text="Save Data", width=13, command=lambda: save(widths))
+    btn = Button(window, text="Save Data", width=13, command=lambda: save(sats))
     btn.place(x=20, y=20)
 
 
@@ -149,6 +149,7 @@ def show_saturations(sats):
     toolbar.update()
 
     canvas.get_tk_widget().pack()
+
 
 
 
