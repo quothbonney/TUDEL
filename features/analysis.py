@@ -132,7 +132,7 @@ def show_saturations(sats):
     plot1 = fig.add_subplot(111) # No I don't know why. 
   
 
-    counts, bins = np.histogram(sats, bins=20, density=True)
+    counts, bins = np.histogram(sats, bins=40, density=True)
     plot1.hist(bins[:-1], bins, weights=counts)
     plot1.set_xlabel('Saturation')
     plot1.set_ylabel('Probability')
