@@ -27,6 +27,7 @@ def saturation_histogram(image, hsvize=True):
     plt.xlabel('Saturation')
     plt.ylabel('Probability')
     plt.show()
+    print(sum(fil)/len(fil))
 
 
 def errors(type, deposit, is_auto):
