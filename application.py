@@ -51,7 +51,7 @@ working_mask = [0]
 
 def update_image(dst):
     global L2
-    state.present = cv2.cvtColor(state.present, cv2.COLOR_BGR2RGB)
+    dst = cv2.cvtColor(dst, cv2.COLOR_BGR2RGB)
     L2.config(image=None)
     L2.image = None
     state.present = dst
