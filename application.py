@@ -51,7 +51,7 @@ working_mask = [0]
 
 def update_image(dst):
     global L2
-
+    state.present = cv2.cvtColor(state.present, cv2.COLOR_BGR2RGB)
     L2.config(image=None)
     L2.image = None
     state.present = dst
@@ -149,6 +149,9 @@ def analyze_buttons():
     if state.type.get() == 'Select Type':
         messagebox.showerror('TUDEL', 'Error: Please select film type')
 
+    if state.is_masked is not True:
+        messagebox.showerror('TUDEL', 'Error: Please select mask')
+
     mask = Mask(state.type.get(), state.present)
     state.original_mask = mask.deposition_mask(state.present)
     state.working_mask = analyze_img()
@@ -182,6 +185,13 @@ def write_file():
 def calibrate_img(*args):
     global state
 
+    if state.is_masked == True:
+        messagebox.showerror('TUDEL', 'Error: Cannot Calibrate Mask')
+        return
+    
+    if state.is_masked is True:
+        messagebox.showerror('TUDEL', 'Error: Cannot calibrate mask')
+
     state.present = calibrate(state.present, 2)
 
     im = Image.fromarray(state.present)
@@ -202,7 +212,7 @@ def analyze_img(*args):
         messagebox.showerror('TUDEL', 'Error: Please select film type')
         return
 
-    if state.is_auto_masked == None:
+    if state.is_masked == False:
         messagebox.showerror('TUDEL', 'Error: No mask selected.')
         return
 
@@ -237,6 +247,10 @@ def dimension_img(*args):
 
     if state.type.get() == 'Select Type':
         messagebox.showerror('TUDEL', 'Error: Please select film type')
+
+    if state.is_masked is not True:
+        messagebox.showerror('TUDEL', 'No mask selected')
+
 
     width = dimensions.size(state.original, state.type.get())
     F2 = Frame(tk)
@@ -277,14 +291,15 @@ def dimension_button():
 
 
 def mask_button():
-    global state
     state.is_auto_masked = True
+    state.is_masked = True
     threading.Thread(target=mask_img).start()
     
 
 def manual_mask_button():
     global state 
     state.is_auto_masked = False
+    state.is_masked = True
 
     # Get the ratio between width and height in order to resize from size of one side
     shp: tuple = state.present.shape
@@ -326,6 +341,8 @@ def sat():
 
 
 def reset():
+    state.is_auto_masked = False
+    state.is_masked = False
     update_image(state.original)
 
 

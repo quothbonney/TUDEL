@@ -44,12 +44,12 @@ def calibrate(img, value):
         messagebox.showerror('TUDEL', "ERROR: Cannot Calibrate Image")
         return image
 
-    while b_val < 165:
+    while b_val < 155:
         counter += 1
         image = calibrate(image, 2)
         b_val = red_brightness(image)
 
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     return image
 
 

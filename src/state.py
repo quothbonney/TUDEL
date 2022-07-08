@@ -6,3 +6,4 @@ class ApplicationState:
         self.present = None
         self.type = None
         self.is_auto_masked = None
+        self.is_masked = False
