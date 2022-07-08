@@ -123,6 +123,8 @@ def show_line_analysis(widths):
  
 
 def show_saturations(sats):
+
+    print(sum(sats)/len(sats))
     window = Toplevel()
     window.title("Saturation Histogram")
     window.geometry('%sx%s' % (600, 600))
