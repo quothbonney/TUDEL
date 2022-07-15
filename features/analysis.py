@@ -8,6 +8,63 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 
 
+def save(widths):
+    txt_content = ""
+    for w in widths:
+        point = str(w)
+        txt_content += point + "\n"
+
+    fob=filedialog.asksaveasfile(filetypes=[('text file','*.txt')],
+        defaultextension='.txt',initialdir='D:\\my_data\\my_html',
+        mode='w')
+    try:
+        fob.write(txt_content)
+        fob.close()
+    except :
+        print (" There is an error...")
+
+
+def line_analysis(mask): 
+    mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+    thresh = cv2.threshold(mask, 0, 255, cv2.THRESH_OTSU + cv2.THRESH_BINARY)[1]
+    
+    widths = []
+    for row in thresh:
+        width = cv2.countNonZero(row)
+        if width > 10:
+            widths.append(width)
+    
+    return widths
+
+
+def show_line_analysis(widths):
+    window = Toplevel()
+    window.title("Line by Line Analysis")
+    window.geometry('%sx%s' % (600, 600))
+    window.configure(background='grey')
+
+    fig = Figure(figsize=(5,5), dpi=100) 
+    plot1 = fig.add_subplot(111) # No I don't know why.
+    plot1.plot(widths)
+    plot1.set_xlabel('Row (px)')
+    plot1.set_ylabel('Highlighted px')
+
+    canvas = FigureCanvasTkAgg(fig, master=window)
+    canvas.draw()
+
+    btn = Button(window, text="Save Data", width=13, command=lambda: save(widths))
+    btn.place(x=20, y=20)
+
+
+    canvas.get_tk_widget().pack()
+
+    toolbar = NavigationToolbar2Tk(canvas, window)
+    toolbar.update()
+
+    canvas.get_tk_widget().pack()
+
+
+
 def mask_size(mask):
     # Count number of pixels in a mask
     gray = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
@@ -16,11 +73,11 @@ def mask_size(mask):
     return pixels
 
 
-def saturation_histogram(image, hsvize=True):
+def saturation_histogram(image, channel, hsvize=True):
     if hsvize is True:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-    channel = image[:,:,2]
+    channel = image[:,:,channel]
     x = channel.flatten()
 
     fil = [p for p in x if p > 10]
