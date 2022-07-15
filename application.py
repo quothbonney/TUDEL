@@ -16,7 +16,6 @@ import os
 original = 0
 # Init
 tk = Tk()
-tk.tk.call('tk', 'scaling', 2.0)
 
 
 f = open("src/spectrum.json")
