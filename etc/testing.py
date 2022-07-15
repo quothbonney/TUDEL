@@ -13,34 +13,36 @@ with open(FILENAME, 'r') as csvfile:
         rows.append(row[1:]);
 
 
+def save(w):
+    # Defining rows from matrix
+    saturation = np.array(rows[1]).astype(float)
+    value = np.array(rows[2]).astype(float)
+    r = np.array(rows[3:]).astype(float)  # Don't count header rows 
 
-# Defining rows from matrix
-saturation = np.array(rows[1]).astype(float)
-value = np.array(rows[2]).astype(float)
-x = np.array(rows[3:]).astype(float)  # Don't count first ros
-
-added = saturation
-fig = plt.figure()
-ax = fig.add_subplot(111)
+    p_sat = np.poly1d(np.polyfit(r[w], saturation, 3))
+    p_val = np.poly1d(np.polyfit(r[w], value, 3))
 
 
-ax.scatter(x[430], added, c='b', label='730')
+    t = np.linspace(0, r[w].max(), 200)
 
-# Getting line of best fit
-theta = np.polyfit(x[430], added, 1);
-y_line = theta[1] + theta[0] * x[430]
-ax.plot(x[430], y_line)
-# of the line using the numpy.polyfit() functiond, c='b');
-print(theta);
 
-ax.scatter(x[430], value, c='g', label='550')
 
-y = x[0] ** 2;
-# ax.plot(x[0], added, c='y', label='750')
-# ax.plot(x[600], added, c='r', label='950')
-ax.set(xlabel='Absorbance', ylabel='Value + Saturation')
+    plt.xlabel("Absorbance")
+    plt.ylabel("Saturation")
+    # plt.plot(r[w], saturation, 'o', t_sat, p_sat(t_sat), '-')
 
-# plt.legend(loc='upper right');
+    plt.scatter(r[w], saturation, c='C1', label="Saturation")
+    plt.plot(t, p_sat(t), 'C1')
 
-plt.show()
+    plt.scatter(r[w], value, c='C2', label="Value")
+    plt.plot(t, p_val(t), 'C2')
 
+    plt.legend(loc='lower right', title=f"{w}nm");
+
+    plt.savefig(f'figures/satvval/{w}.jpg')
+    print(f"Saved figure {w}")
+    plt.clf()
+
+if __name__ == '__main__':
+    for i in range(0, 500, 2):
+        save(i)
