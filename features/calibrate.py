@@ -49,7 +49,6 @@ def calibrate(img, value):
         image = calibrate(image, 2)
         b_val = red_brightness(image)
 
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     return image
 
 

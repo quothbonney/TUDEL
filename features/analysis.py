@@ -73,21 +73,22 @@ def mask_size(mask):
     return pixels
 
 
-def saturation_histogram(image, channel, hsvize=True):
+def saturation_histogram(image, channel_num, hsvize=True):
     if hsvize is True:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-    channel = image[:,:,channel]
+    channel = image[:,:,channel_num]
     x = channel.flatten()
 
     fil = [p for p in x if p > 10]
+    
+    print(f"Channel {channel_num} average: " + str(sum(fil)/len(fil)))
 
     return fil
 
 
 def show_saturations(sats):
 
-    print(sum(sats)/len(sats))
     window = Toplevel()
     window.title("Saturation Histogram")
     window.geometry('%sx%s' % (600, 600))

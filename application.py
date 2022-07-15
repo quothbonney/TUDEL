@@ -393,11 +393,11 @@ def lines(*args):
     analysis.show_line_analysis(w)
 
 def sat():
-    sats = analysis.saturation_histogram(global_return, channel=1) # Saturation channel
+    sats = analysis.saturation_histogram(global_return, channel_num=1) # Saturation channel
     analysis.show_saturations(sats)
 
 def vals():
-    val = analysis.saturation_histogram(global_return, channel=2) # Value channel
+    val = analysis.saturation_histogram(global_return, channel_num=2) # Value channel
     analysis.show_saturations(val)
 
 def callback(url):
