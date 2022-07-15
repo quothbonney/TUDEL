@@ -16,11 +16,11 @@ def mask_size(mask):
     return pixels
 
 
-def saturation_histogram(image, hsvize=True):
+def saturation_histogram(image, channel, hsvize=True):
     if hsvize is True:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-    channel = image[:,:,2]
+    channel = image[:,:,channel]
     x = channel.flatten()
 
     fil = [p for p in x if p > 10]

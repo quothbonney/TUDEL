@@ -235,9 +235,10 @@ def mask_img(*args):
 
     menubar.entryconfig("Analysis", state="normal")
     mask = Mask(state.type.get(), state.present)
-    state.original_mask = mask.deposition_mask(state.present)
+    original_mask = mask.deposition_mask(state.present)
 
-    dep_masked = cv2.bitwise_and(state.present, state.present, mask=state.original_mask)
+    dep_masked = cv2.bitwise_and(state.present, state.present, mask=original_mask)
+    dep_masked = cv2.cvtColor(dep_masked, cv2.COLOR_BGR2RGB)
     update_image(dep_masked)
     state.present = dep_masked
     return dep_masked
@@ -328,21 +329,23 @@ def manual_mask_button():
     cropped = state.present[top:bottom, left:right]
 
     working_mask = cv2.cvtColor(cropped, cv2.COLOR_RGB2HSV)
-    state.present = cropped
+    state.present = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
     
     menubar.entryconfig("Analysis", state="normal")
+    
     update_image(state.present)
 
 
     
-def sat():
-    sats = analysis.saturation_histogram(state.present)
+def sat(chan):
+    sats = analysis.saturation_histogram(channel=chan, image=state.present)
     analysis.show_saturations(sats)
 
 
 def reset():
     state.is_auto_masked = False
     state.is_masked = False
+    state.present = state.original
     update_image(state.original)
 
 
@@ -451,7 +454,8 @@ analysisbar = Menu(menubar, tearoff=0)
 
 analysisbar.add_command(label="Imperfection", command=analysis_button)
 analysisbar.add_command(label="Line by Line", command=lines)
-analysisbar.add_command(label="Saturation", command=sat)
+analysisbar.add_command(label="Saturation", command=lambda: sat(1))
+analysisbar.add_command(label="Value", command=lambda: sat(2))
 
 menubar.add_cascade(label="Analysis", menu=analysisbar)
 menubar.entryconfig("Analysis", state="disabled")
