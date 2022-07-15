@@ -2,6 +2,10 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from features.mask import Mask
+from tkinter import *
+from tkinter import filedialog
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 
 
 def mask_size(mask):
@@ -16,18 +20,44 @@ def saturation_histogram(image, hsvize=True):
     if hsvize is True:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-    x = image.flatten()
+    channel = image[:,:,2]
+    x = channel.flatten()
 
-    filter = x > 50
+    fil = [p for p in x if p > 10]
 
-    fil = x[filter]
+    return fil
 
-    counts, bins = np.histogram(fil, density=True)
-    plt.hist(bins[:-1], bins, weights=counts)
-    plt.xlabel('Saturation')
-    plt.ylabel('Probability')
-    plt.show()
-    print(sum(fil)/len(fil))
+
+def show_saturations(sats):
+
+    print(sum(sats)/len(sats))
+    window = Toplevel()
+    window.title("Saturation Histogram")
+    window.geometry('%sx%s' % (600, 600))
+    window.configure(background='grey')
+
+    fig = Figure(figsize=(5,5), dpi=100) 
+    plot1 = fig.add_subplot(111) # No I don't know why. 
+  
+
+    counts, bins = np.histogram(sats, bins=40, density=True)
+    plot1.hist(bins[:-1], bins, weights=counts)
+    plot1.set_xlabel('Saturation')
+    plot1.set_ylabel('Probability')
+   
+    canvas = FigureCanvasTkAgg(fig, master=window)
+    canvas.draw()
+
+    btn = Button(window, text="Save Data", width=13, command=lambda: save(sats))
+    btn.place(x=20, y=20)
+
+
+    canvas.get_tk_widget().pack()
+
+    toolbar = NavigationToolbar2Tk(canvas, window)
+    toolbar.update()
+
+    canvas.get_tk_widget().pack()
 
 
 def errors(type, deposit, is_auto):

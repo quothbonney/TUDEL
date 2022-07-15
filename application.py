@@ -11,6 +11,7 @@ from features import dimensions, selection, analysis
 from features.mask import Mask
 import json
 import sys
+import os
 
 original = 0
 # Init
@@ -104,6 +105,9 @@ def Image_Select():
         tk.geometry("1200x510")
     except:
         return
+
+    filemenu.entryconfig("Save as", state="normal")
+    menubar.entryconfig("Edit", state="normal")
 
 
 v1 = DoubleVar()
@@ -225,6 +229,8 @@ def mask_img(*args):
     dep_masked = cv2.bitwise_and(global_return, global_return, mask=original_mask)
     update_image(dep_masked)
     global_return = dep_masked
+
+    menubar.entryconfig("Analysis", state="normal")
     return dep_masked
 
 
@@ -381,17 +387,76 @@ reset_btn.place(x=800, y=450)
 
 
 # Menu Bar
-menubar = Menu(tk)
-filemenu = Menu(menubar, tearoff=0)
-filemenu.add_command(label="Open", command=trgt2)
-filemenu.add_command(label="Save As", command=trgt3)
 
+def lines(*args):
+    w = analysis.line_analysis(global_return)
+    analysis.show_line_analysis(w)
 
-tk.config(menu=menubar)
-
+def sat():
+    sats = analysis.saturation_histogram(global_return)
+    analysis.show_saturations(sats)
 
 def callback(url):
     webbrowser.open_new(url)
+
+
+def new_window():
+    os.system("python3 ./application.py")
+
+
+def donothing():
+   filewin = Toplevel(root)
+   button = Button(filewin, text="Do nothing button")
+   button.pack()
+   
+menubar = Menu(tk)
+
+# File bar
+filemenu = Menu(menubar, tearoff=0)
+filemenu.add_command(label="New Window", command=new_window)
+filemenu.add_command(label="Open", command=trgt2)
+filemenu.add_command(label="Save as", command=trgt3)
+
+filemenu.add_separator()
+
+# Save as is disabled by default to avoid error
+filemenu.entryconfig("Save as", state="disabled")
+
+filemenu.add_command(label="Exit", command=tk.quit)
+menubar.add_cascade(label="File", menu=filemenu)
+
+
+
+# Edit menu
+editmenu = Menu(menubar, tearoff=0)
+editmenu.add_command(label="Reset", command=reset)
+
+editmenu.add_separator()
+
+editmenu.add_command(label="Calibrate", command=calibrate_button)
+editmenu.add_command(label="Dimension", command=dimension_button)
+
+editmenu.add_separator()
+
+editmenu.add_command(label="Auto Mask", command=mask_button)
+editmenu.add_command(label="Manual Mask", command=manual_mask_button)
+
+menubar.add_cascade(label="Edit", menu=editmenu)
+menubar.entryconfig("Edit", state="disabled")
+
+
+# Analysis bar
+analysisbar = Menu(menubar, tearoff=0)
+
+analysisbar.add_command(label="Imperfection", command=analysis_button)
+analysisbar.add_command(label="Line by Line", command=lines)
+analysisbar.add_command(label="Saturation", command=sat)
+
+menubar.add_cascade(label="Analysis", menu=analysisbar)
+menubar.entryconfig("Analysis", state="disabled")
+
+tk.config(menu=menubar)
+
 
 tk.mainloop()
 f.close()
