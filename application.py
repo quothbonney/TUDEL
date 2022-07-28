@@ -17,6 +17,7 @@ original = 0
 # Init
 tk = Tk()
 
+tk.call('wm', 'iconphoto', tk._w, PhotoImage(file="ICON.ico"))
 
 f = open("src/spectrum.json")
 bound_map = json.load(f)
