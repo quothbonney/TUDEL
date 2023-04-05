@@ -87,7 +87,7 @@ def saturation_histogram(image, channel_num, hsvize=True):
     return fil
 
 
-def show_saturations(sats):
+def show_saturations(sats, ctype):
 
     window = Toplevel()
     window.title("Saturation Histogram")
@@ -98,9 +98,9 @@ def show_saturations(sats):
     plot1 = fig.add_subplot(111) # No I don't know why. 
   
 
-    counts, bins = np.histogram(sats, bins=40, density=True)
+    counts, bins = np.histogram(sats, density=True, bins=256, range=(0, 255))
     plot1.hist(bins[:-1], bins, weights=counts)
-    plot1.set_xlabel('Saturation')
+    plot1.set_xlabel(ctype)
     plot1.set_ylabel('Probability')
    
     canvas = FigureCanvasTkAgg(fig, master=window)

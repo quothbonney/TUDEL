@@ -395,12 +395,16 @@ def lines(*args):
 
 def sat():
     sats = analysis.saturation_histogram(global_return, channel_num=1)  # Saturation channel
-    analysis.show_saturations(sats)
+    analysis.show_saturations(sats, "Saturation")
 
 
 def vals():
     val = analysis.saturation_histogram(global_return, channel_num=2)  # Value channel
-    analysis.show_saturations(val)
+    analysis.show_saturations(val, "Value")
+
+def hues():
+    val = analysis.saturation_histogram(global_return, channel_num=0)  # Value channel
+    analysis.show_saturations(val, "Hue")
 
 
 def callback(url):
@@ -458,6 +462,7 @@ analysisbar.add_command(label="Line by Line", command=lines)
 analysisbar.add_command(label="Saturation", command=sat)
 
 analysisbar.add_command(label="Value", command=vals)
+analysisbar.add_command(label="Hues", command=hues)
 
 menubar.add_cascade(label="Analysis", menu=analysisbar)
 menubar.entryconfig("Analysis", state="disabled")
