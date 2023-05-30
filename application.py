@@ -9,7 +9,7 @@ from tkinter import messagebox
 from features.calibrate import calibrate
 from features import dimensions, selection, analysis
 from features.mask import Mask
-import json
+import json, threading
 import sys
 import os
 
@@ -47,6 +47,7 @@ global_return = 0
 
 is_auto_masked = None
 working_mask = [0]
+webcam_on = False
 
 
 def update_image(dst):
@@ -64,6 +65,39 @@ def update_image(dst):
 
 
 # Image Select and Save
+
+def Webcam_Stream():
+    global tkimage
+    global webcam_on
+    global hsv
+    global img_rgb
+    global capture
+
+    webcam_on = not webcam_on
+
+    capture = cv2.VideoCapture(0)
+
+    if not capture.isOpened():
+        messagebox.showerror("Error", "Webcam not found")
+        return
+
+    def update_image_w():
+        _, frame = capture.read()
+        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+        im = Image.fromarray(img_rgb)
+        im.thumbnail((360, 360))
+        tkimage = ImageTk.PhotoImage(im)
+
+        L1 = Label(F1, image=tkimage)
+        L1.grid(row=1, column=0)
+        L1.image = tkimage
+        #tk.after(1, update_image) # Call again after 1 ms to keep updating the frame.
+
+    while webcam_on:
+        update_image_w()
+
+
 def Image_Select():
     global hsv
     global tkimage
@@ -331,6 +365,9 @@ def reset():
 def trgt2():
     threading.Thread(target=Image_Select).start()
 
+def webcamtrgt():
+    threading.Thread(target=Webcam_Stream).start()
+
 
 def trgt3():
     threading.Thread(target=write_file).start()
@@ -339,7 +376,11 @@ def trgt3():
 # Open Button
 B1 = Button(tk, text="Open Image", command=trgt2)
 B1.config(cursor="hand2")
-B1.place(x=180, y=450)
+B1.place(x=160, y=450)
+
+BWeb = Button(tk, text="Tiggle Webcam", command=webcamtrgt)
+BWeb.config(cursor="hand2")
+BWeb.place(x=200, y=450)
 
 # Save as Button
 saveBTN = Button(tk, text="Save As", command=trgt3)
