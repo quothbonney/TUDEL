@@ -1,7 +1,7 @@
 import json
 
 def write_to_config(data, line_key):
-    config_file: str = "src/config.json"
+    config_file: str = "./src/config.json"
     with open(config_file, 'r') as f:
         config_data = json.load(f)
 
@@ -9,3 +9,5 @@ def write_to_config(data, line_key):
 
     with open(config_file, "w") as f:
         json.dump(config_data, f, indent=4)
+    
+    print(f"Wrote {data} to {line_key} ")

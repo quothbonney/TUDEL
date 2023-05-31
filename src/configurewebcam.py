@@ -7,11 +7,12 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-def get_webcam_number():
+def webcam_window():
     def on_submit():
         selected_value = dropdown_var.get()
         print("Selected value:", selected_value)
         window.destroy()
+        util.write_to_config(selected_value, "webcam_number")
         return selected_value
 
     # Create a Tkinter window
@@ -75,7 +76,10 @@ def get_webcam_number():
     canvas.get_tk_widget().pack()
 
     window.mainloop()  # Add this line to start the Tkinter event loop
+    
+def get_webcam_number():
+    result = webcam_window()
+        
 
-result = get_webcam_number()
-print("Returned value from the function:", result)
-util.write_to_config(result, "webcam_number")
+
+get_webcam_number()
