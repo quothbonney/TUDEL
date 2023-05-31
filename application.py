@@ -68,21 +68,23 @@ def update_image(dst):
 
 def Webcam_Stream():
     global tkimage
-    global webcam_on
     global hsv
     global img_rgb
     global capture
+    global webcam_on
 
-    webcam_on = not webcam_on
-
-    capture = cv2.VideoCapture(0)
+    capture = cv2.VideoCapture(0, cv2.CAP_ANY)
 
     if not capture.isOpened():
         messagebox.showerror("Error", "Webcam not found")
         return
 
-    def update_image_w():
+    webcam_on = not webcam_on
+
+    def update_image_w(final=False):
+        global global_return
         _, frame = capture.read()
+
         img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
         im = Image.fromarray(img_rgb)
@@ -92,10 +94,26 @@ def Webcam_Stream():
         L1 = Label(F1, image=tkimage)
         L1.grid(row=1, column=0)
         L1.image = tkimage
+        if final:
+            global_return = img_rgb
+            L2 = Label(F1, image=None)
+            L2.config(image=tkimage)
+            
+            L1.grid(row=1, column=0)
+            L2.grid(row=1, column=1)
+            saveBTN.config(state="normal", cursor="hand2")
+            tk.geometry("1200x510")
         #tk.after(1, update_image) # Call again after 1 ms to keep updating the frame.
 
     while webcam_on:
         update_image_w()
+
+    update_image_w(True)
+
+
+
+    #L2 = Label(F1, image=None)
+    #L2.config(image=tkimage)
 
 
 def Image_Select():
@@ -378,7 +396,7 @@ B1 = Button(tk, text="Open Image", command=trgt2)
 B1.config(cursor="hand2")
 B1.place(x=160, y=450)
 
-BWeb = Button(tk, text="Tiggle Webcam", command=webcamtrgt)
+BWeb = Button(tk, text="Toggle Webcam", command=webcamtrgt)
 BWeb.config(cursor="hand2")
 BWeb.place(x=200, y=450)
 
