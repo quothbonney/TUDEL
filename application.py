@@ -3,15 +3,14 @@ from tkinter import filedialog
 from PIL import ImageTk, Image
 import cv2
 import numpy as np
-import threading
 import webbrowser
 from tkinter import messagebox
-from features.calibrate import calibrate
-from features import dimensions, selection, analysis
-from features.mask import Mask
+from src.calibrate import calibrate
+from src import dimensions, analysis, selection
+from src.mask import Mask
 import json, threading
-import sys
 import os
+
 
 original = 0
 # Init
@@ -19,7 +18,7 @@ tk = Tk()
 
 tk.iconphoto(True, PhotoImage(file='imgs/icon.png'))
 
-f = open("src/spectrum.json")
+f = open("data/spectrum.json")
 bound_map = json.load(f)
 
 windowWidth = tk.winfo_reqwidth()

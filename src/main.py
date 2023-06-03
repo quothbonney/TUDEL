@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 import sys
-from features.mask import Mask
-from features import analysis
+from src.mask import Mask
+from src import analysis
 
 
 def main(img, type):

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import json
 
-f = open("src/spectrum.json")
+f = open("data/spectrum.json")
 bound_map = json.load(f)
 
 class Mask:

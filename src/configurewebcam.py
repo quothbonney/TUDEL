@@ -1,11 +1,10 @@
-import cv2, json
+import cv2
 import tkinter as tk
 import util
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 
 def webcam_window():
     def on_submit():

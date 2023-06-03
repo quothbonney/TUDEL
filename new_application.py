@@ -35,6 +35,9 @@ class Application(tk.Tk):
         self.title("TU Digital Electrochemistry Lab")
         self.geometry("1200x800")
 
+        self.image_handler = ImageWranger()
+        self.interface = Interface(self)
+
         self.resizable = False
 
 class ImageWranger:
@@ -107,13 +110,24 @@ class ConsoleView(scrolledtext.ScrolledText):
         """Clears the console view."""
         self.delete('1.0', tk.END)
 
+class ExperimentInterface(ttk.Frame):
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.master = master
+        self.grid(padx=25, pady=25)
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        self.man_mask= ttk.Button(self, text="Open Image", command=lambda: (self.image_handler.select_image(), self.update_image_interface(2), self.console.update()))
+        self.man_mask.grid(row=0, column=0)
 
 class Interface(ttk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
+        self.image_handler = master.image_handler
         self.grid(pady=25, padx=25)
-        self.image_handler = ImageWranger()
 
         self.create_widgets()
 
@@ -147,10 +161,10 @@ class Interface(ttk.Frame):
         self.save_button.grid(row=2, column=1)
 
         self.divider = ttk.Separator(self, orient="vertical")
-        self.divider.grid(row=1, column=2)
+        self.divider.grid(row=2, column=0)
 
-        self.save_button = ttk.Button(self, state="disabled", text="Save Image", command=lambda: (self.image_handler.write_image(), self.update_image_interface(2), self.console.update()))
-        self.save_button.grid(row=0, column=3)
+        self.experiments = ExperimentInterface(self)
+        self.experiments.grid(column=2, row=0)
 
         # -------------- Console ---------------
         self.console = ConsoleView(self)
@@ -179,6 +193,5 @@ class Interface(ttk.Frame):
             self.view_right.set_image(imr)
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = Interface(master=root)
+    app = Application()
     app.mainloop()

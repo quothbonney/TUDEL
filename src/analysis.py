@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
-from features.mask import Mask
+from src.mask import Mask
 from tkinter import *
 from tkinter import filedialog
 from matplotlib.figure import Figure

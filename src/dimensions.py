@@ -3,7 +3,7 @@ import numpy as np
 import sys
 import json
 
-f = open("src/spectrum.json")
+f = open("data/spectrum.json")
 bound_map = json.load(f)
 
 
