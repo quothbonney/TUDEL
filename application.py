@@ -267,7 +267,7 @@ def analyze_img(*args):
     cv2.waitKey(0)
 
 
-def mask_img(*args):
+def mask_img():
     global global_return
     global option_variable
     global working_mask

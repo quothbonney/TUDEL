@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 from tkinter import scrolledtext
 from src.selection import launch_select_window
+from src.mask import Mask
+import json
 
 
 class SingletonTextHandler:
@@ -23,14 +25,17 @@ class SingletonTextHandler:
     def add_message(cls, message):
         cls.messages.append(message)
 
-f = open("data/spectrum.json")
 
 class Application(tk.Tk):
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title("TU Digital Electrochemistry Lab")
         self.geometry("1200x800")
         self.iconphoto(True, tk.PhotoImage(file='imgs/icon.png'))
+
+        cm = open("data/spectrum.json")
+        self.colormap = json.load(cm)
 
         self.image_handler = ImageWranger()
         self.interface = Interface(self)
@@ -43,6 +48,7 @@ class ImageWranger:
         self.left = np.zeros((9, 9, 3))
         self.right = np.zeros((9, 9, 3))
         self.original = np.zeros((9, 9, 3))
+        self.mask = np.zeros((9, 9, 3))
 
     def select_image(self):
         imageselect = filedialog.askopenfilename(initialdir="Desktop",
@@ -74,6 +80,13 @@ class ImageWranger:
         cropped = launch_select_window(self.left)
         SingletonTextHandler.add_message(f"Cropped image to size ({cropped.shape[0]}, {cropped.shape[1]})")
         self.right = cropped
+
+    def auto_mask(self, material: str):
+        lmask = Mask(material, self.right)
+        self.mask = lmask.deposition_mask(self.right)
+        dep_masked = cv2.bitwise_and(self.right, self.right, mask=self.mask)
+        self.right = dep_masked
+
 
 class ImageView(tk.Label):
     def __init__(self, parent, *args, **kwargs):
@@ -118,25 +131,37 @@ class ExperimentInterface(ttk.Frame):
         super().__init__(master)
         self.master: Interface = master
         self.grid(padx=25, pady=25)
+        self.material = "PbO2"
         self.state = state
 
         self.create_widgets()
 
+    def change_material_callback(self, option: str):
+        self.material = option
+
     def create_widgets(self):
-        self.container = tk.Frame(self, width=200, height=500, relief=tk.RAISED, borderwidth=2)
+        self.container = tk.Frame(self, width=200, height=500, relief=tk.RAISED, borderwidth=3)
         self.container.grid(row=0, column=0, columnspan=1, sticky=(tk.N, tk.S, tk.W, tk.E))
 
-        dropdown_var = tk.StringVar()
+        choices = [choice for choice in self.master.master.colormap]
+        option_variable = tk.StringVar(self)
+        option_variable.set('Select Type')
+        self.options = ttk.OptionMenu(self.container, option_variable, *choices, command=lambda: (self.change_material_callback(option_variable.get())))
+        self.options.grid(row=0, column=0, padx=10, pady=10)
 
         self.man_mask = ttk.Button(self.container, text="Manual Mask", state=self.state, command=lambda: (self.master.image_handler.manual_mask(), self.master.update_image_interface(2), self.master.console.update()))
-        self.man_mask.grid(row=0, column=1, padx=10, pady=10)
+        self.man_mask.grid(row=1, column=0, padx=10, pady=5)
+
+        self.auto_mask = ttk.Button(self.container, text="Auto Mask", state=self.state, command=lambda: (self.master.image_handler.auto_mask(self.material), self.master.update_image_interface(2), self.master.console.update()))
+        self.auto_mask.grid(row=2, column=0, padx=10, pady=0)
 
     def change_state(self, state: bool):
-       self.state = 'normal' if state else 'disabled'
+        self.state = 'normal' if state else 'disabled'
+        self.create_widgets()
 
 
 class Interface(ttk.Frame):
-    def __init__(self, master=None):
+    def __init__(self, master: Application):
         super().__init__(master)
         self.master = master
         self.image_handler = master.image_handler
@@ -150,7 +175,7 @@ class Interface(ttk.Frame):
         self.label_left = ttk.Label(self, text="Original Image", font="bold")
         self.label_left.grid(row=0, column=0)
         # Bounding box of image
-        self.label_view_left = tk.Label(self, text="Modified", height="19", width="52", bd=0.5, relief="solid")
+        self.label_view_left = tk.Label(self, text="Original", height="19", width="52", bd=0.5, relief="solid")
         self.label_view_left.grid(row=1, column=0, pady=10, padx=10)
         # ImageView containing the original image
         self.view_left = ImageView(self, image=None)
@@ -175,7 +200,7 @@ class Interface(ttk.Frame):
         self.divider.grid(row=2, column=0)
 
         self.experiments = ExperimentInterface(self)
-        self.experiments.grid(column=2, row=0)
+        self.experiments.grid(column=2, row=1, sticky=(tk.N))
 
         # -------------- Console ---------------
         self.console = ConsoleView(self)
@@ -185,6 +210,7 @@ class Interface(ttk.Frame):
         # Change button states depending on image loaded
         if self.image_handler.left is not None:
             self.save_button.config(state="normal")
+            self.experiments.change_state(True)
         else:
             self.save_button.config(state="disabled")
 
