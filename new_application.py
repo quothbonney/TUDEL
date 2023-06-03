@@ -6,12 +6,7 @@ from PIL import ImageTk, Image
 import cv2
 import numpy as np
 from tkinter import scrolledtext
-import webbrowser
-from tkinter import messagebox
-from src.calibrate import calibrate
-from src import dimensions, analysis, selection
-from src.mask import Mask
-import json, threading, logging
+from src.selection import launch_select_window
 
 
 class SingletonTextHandler:
@@ -28,12 +23,14 @@ class SingletonTextHandler:
     def add_message(cls, message):
         cls.messages.append(message)
 
+f = open("data/spectrum.json")
 
 class Application(tk.Tk):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.title("TU Digital Electrochemistry Lab")
         self.geometry("1200x800")
+        self.iconphoto(True, tk.PhotoImage(file='imgs/icon.png'))
 
         self.image_handler = ImageWranger()
         self.interface = Interface(self)
@@ -42,8 +39,10 @@ class Application(tk.Tk):
 
 class ImageWranger:
     def __init__(self):
+        # Init to arbitrary zero matricies (avoids possible future errors)
         self.left = np.zeros((9, 9, 3))
         self.right = np.zeros((9, 9, 3))
+        self.original = np.zeros((9, 9, 3))
 
     def select_image(self):
         imageselect = filedialog.askopenfilename(initialdir="Desktop",
@@ -71,6 +70,10 @@ class ImageWranger:
 
         return True
 
+    def manual_mask(self):
+        cropped = launch_select_window(self.left)
+        SingletonTextHandler.add_message(f"Cropped image to size ({cropped.shape[0]}, {cropped.shape[1]})")
+        self.right = cropped
 
 class ImageView(tk.Label):
     def __init__(self, parent, *args, **kwargs):
@@ -111,16 +114,26 @@ class ConsoleView(scrolledtext.ScrolledText):
         self.delete('1.0', tk.END)
 
 class ExperimentInterface(ttk.Frame):
-    def __init__(self, master=None):
+    def __init__(self, master, state='disabled'):
         super().__init__(master)
-        self.master = master
+        self.master: Interface = master
         self.grid(padx=25, pady=25)
+        self.state = state
 
         self.create_widgets()
 
     def create_widgets(self):
-        self.man_mask= ttk.Button(self, text="Open Image", command=lambda: (self.image_handler.select_image(), self.update_image_interface(2), self.console.update()))
-        self.man_mask.grid(row=0, column=0)
+        self.container = tk.Frame(self, width=200, height=500, relief=tk.RAISED, borderwidth=2)
+        self.container.grid(row=0, column=0, columnspan=1, sticky=(tk.N, tk.S, tk.W, tk.E))
+
+        dropdown_var = tk.StringVar()
+
+        self.man_mask = ttk.Button(self.container, text="Manual Mask", state=self.state, command=lambda: (self.master.image_handler.manual_mask(), self.master.update_image_interface(2), self.master.console.update()))
+        self.man_mask.grid(row=0, column=1, padx=10, pady=10)
+
+    def change_state(self, state: bool):
+       self.state = 'normal' if state else 'disabled'
+
 
 class Interface(ttk.Frame):
     def __init__(self, master=None):
@@ -132,8 +145,6 @@ class Interface(ttk.Frame):
         self.create_widgets()
 
     def create_widgets(self):
-        self.master.title("TU Digital Electrochemistry Lab")
-
         # ------------- Image Boxes/Labels -------------
         # Labels for Left side
         self.label_left = ttk.Label(self, text="Original Image", font="bold")
@@ -189,7 +200,7 @@ class Interface(ttk.Frame):
         else:
             iml = self.image_handler.left
             self.view_left.set_image(iml)
-            imr = self.image_handler.left
+            imr = self.image_handler.right
             self.view_right.set_image(imr)
 
 if __name__ == "__main__":

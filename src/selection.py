@@ -1,5 +1,6 @@
 import tkinter as tk
 from PIL import Image, ImageTk
+import cv2
 
 WIDTH, HEIGHT = 900, 900
 topx, topy, botx, boty = 0, 0, 0, 0
@@ -27,7 +28,7 @@ def update_sel_rect(event):
     output = (topx, topy, botx, boty)
 
 
-def main(path):
+def init_window(path):
     global canvas, rect_id
     window = tk.Toplevel()
     window.title("Select Area")
@@ -57,3 +58,31 @@ def main(path):
     button.wait_variable(var)
     window.destroy()
     return output
+
+def launch_select_window(image):
+    shp: tuple = image.shape
+    height_width_ratio = shp[0] / shp[1]
+    size = 900
+    dim = (size, int(size * height_width_ratio))
+
+    # Get the points of the selected area
+    resized = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
+    left, top, right, bottom = init_window(resized)
+
+    rescaling_factor = shp[1] / size
+    print(rescaling_factor)
+    left = int(left * rescaling_factor)
+    top = int(top * rescaling_factor)
+    right = int(right * rescaling_factor)
+    bottom = int(bottom * rescaling_factor)
+
+    # Ensure that it won't slice backwards
+    if top > bottom:
+        bottom, top = top, bottom
+    if left > right:
+        right, left = left, right
+
+    # Numpy slicing crop that I refuse to believe I'm smart enough to have thought of myself
+    cropped = image[top:bottom, left:right]
+
+    return cropped
