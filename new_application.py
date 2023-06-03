@@ -44,6 +44,7 @@ class Application(tk.Tk):
 
 class ImageWranger:
     def __init__(self):
+        self.showmask = False
         # Init to arbitrary zero matricies (avoids possible future errors)
         self.left = np.zeros((9, 9, 3))
         self.right = np.zeros((9, 9, 3))
@@ -85,7 +86,8 @@ class ImageWranger:
         lmask = Mask(material, self.right)
         self.mask = lmask.deposition_mask(self.right)
         dep_masked = cv2.bitwise_and(self.right, self.right, mask=self.mask)
-        self.right = dep_masked
+        self.mask = dep_masked
+        SingletonTextHandler.add_message(f"Auto masked image by {material} color range")
 
 
 class ImageView(tk.Label):
@@ -155,6 +157,7 @@ class ExperimentInterface(ttk.Frame):
         self.auto_mask = ttk.Button(self.container, text="Auto Mask", state=self.state, command=lambda: (self.master.image_handler.auto_mask(self.material), self.master.update_image_interface(2), self.master.console.update()))
         self.auto_mask.grid(row=2, column=0, padx=10, pady=0)
 
+
     def change_state(self, state: bool):
         self.state = 'normal' if state else 'disabled'
         self.create_widgets()
@@ -166,7 +169,13 @@ class Interface(ttk.Frame):
         self.master = master
         self.image_handler = master.image_handler
         self.grid(pady=25, padx=25)
+        self.button_state = 'disabled'
 
+        self.create_widgets()
+
+
+    def change_state(self, state: bool):
+        self.button_state = 'normal' if state else 'disabled'
         self.create_widgets()
 
     def create_widgets(self):
@@ -189,13 +198,24 @@ class Interface(ttk.Frame):
         self.view_right = ImageView(self, text="Modified")
         self.view_right.grid(row=1, column=1)
 
+        # -------------- Show Mask ---------------
+        def show_mask_callback(mask: int): # Callback function because I forget how to write lambdas correctly
+            self.image_handler.showmask = mask
+            # Reverse False => True because I got something reversed somewhere
+            self.image_handler.showmask = not self.image_handler.showmask
+        show_mask = tk.IntVar()
+        self.listbox = ttk.Checkbutton(self, variable=show_mask, state=self.button_state, text="Show mask", command=lambda: (show_mask_callback(show_mask.get()), self.update_image_interface(1)))
+        self.listbox.place(x=740, y=405)
+
+
         # -------------- Buttons ---------------
-        self.open_button = ttk.Button(self, text="Open Image", command=lambda: (self.image_handler.select_image(), self.update_image_interface(2), self.console.update()))
+        self.open_button = ttk.Button(self, text="Open Image", command=lambda: (self.image_handler.select_image(), self.change_state(1), self.update_image_interface(2), self.console.update()))
         self.open_button.grid(row=2, column=0)
 
-        self.save_button = ttk.Button(self, state="disabled", text="Save Image", command=lambda: (self.image_handler.write_image(), self.update_image_interface(2), self.console.update()))
+        self.save_button = ttk.Button(self, state=self.button_state, text="Save Image", command=lambda: (self.image_handler.write_image(), self.update_image_interface(2), self.console.update()))
         self.save_button.grid(row=2, column=1)
 
+        # -------------- Experiments Interface ---------------
         self.divider = ttk.Separator(self, orient="vertical")
         self.divider.grid(row=2, column=0)
 
@@ -218,7 +238,8 @@ class Interface(ttk.Frame):
             raise Exception("Side must be (0, 1, 2)")
 
         if side == 1:
-            imr = self.image_handler.left
+            # Get the regular image, unless the mask is selected
+            imr = self.image_handler.right if self.image_handler.showmask else self.image_handler.mask
             self.view_right.set_image(imr)
         elif side == 0:
             iml = self.image_handler.left
