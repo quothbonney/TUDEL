@@ -72,6 +72,10 @@ class MaskAnalyzer:
         green[:, :, 1] = 255
         dst = cv2.bitwise_or(green, self.image, mask=self.error_mask)
         self.error_image = cv2.addWeighted(dst, 0.5, self.image, 0.7, 0)
+        dstgreen = cv2.bitwise_and(green, green, mask=self.error_mask)
+        error_size = src.analysis.mask_size(dstgreen)
+        deposit_size = src.analysis.mask_size(self.image)
+        print(error_size/deposit_size)
 
 
 class ImageWranger:
@@ -123,6 +127,7 @@ class ImageWranger:
     def manual_mask(self):
         cropped = launch_select_window(self.left)
         SingletonTextHandler.add_message(f"Cropped image to size ({cropped.shape[0]}, {cropped.shape[1]})")
+        self.mask = cropped
         self.right = cropped
         self.hasmask = True
         self.image_select = 1
@@ -134,6 +139,7 @@ class ImageWranger:
         self.mask = dep_masked
         SingletonTextHandler.add_message(f"Auto masked image by {material} color range")
         self.hasmask = True
+        self.right = self.mask
         self.image_select = 1
 
     def set_image(self, side: int, img_array):
