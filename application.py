@@ -12,6 +12,7 @@ from src.mask import Mask
 import src.analysis
 import json
 
+EMPTY_TENSOR = np.zeros((9, 9, 3),dtype=np.uint8)
 
 class SingletonTextHandler:
     _instance = None
@@ -46,14 +47,15 @@ class Application(tk.Tk):
 
 
 class MaskAnalyzer:
-    def __init__(self, image, material: str, auto_masked: bool):
+    def __init__(self, master, image, material: str, auto_masked: bool):
         # Image is the colored mask, image_mask is the pure boolean
+        self.master = master
         self.image = image
         self.material = material
         self.auto_masked = auto_masked
-        self.error_mask = np.zeros((9, 9, 3))
+        self.error_mask = EMPTY_TENSOR
         # Error image not for scientific analysis. Visualization purposes only. Use error_mask
-        self.error_image = np.zeros((9, 9, 3))
+        self.error_image = EMPTY_TENSOR
 
     # Alternative constructor for recalling object
     def set(self, image, material: str, auto_masked: bool):
@@ -61,9 +63,9 @@ class MaskAnalyzer:
         self.image = image
         self.material = material
         self.auto_masked = auto_masked
-        self.error_mask = np.zeros((9, 9, 3))
+        self.error_mask = EMPTY_TENSOR
         # Error image not for scientific analysis. Visualization purposes only. Use error_mask
-        self.error_image = np.zeros((9, 9, 3))
+        self.error_image = EMPTY_TENSOR
 
     def gradient_segmentation(self):
         self.error_mask = src.analysis.errors(self.material, self.image, is_auto=self.auto_masked)
@@ -75,7 +77,7 @@ class MaskAnalyzer:
         dstgreen = cv2.bitwise_and(green, green, mask=self.error_mask)
         error_size = src.analysis.mask_size(dstgreen)
         deposit_size = src.analysis.mask_size(self.image)
-        print(error_size/deposit_size)
+        SingletonTextHandler.add_message(f"Percent Imperfection: {round((error_size/deposit_size)*100, 5)}%")
 
 
 class ImageWranger:
@@ -83,18 +85,18 @@ class ImageWranger:
         self.showmask = False
         self.hasmask = False
         # Init to arbitrary zero matricies (avoids possible future errors)
-        self.left = np.zeros((9, 9, 3))
-        self.right = np.zeros((9, 9, 3))
-        self.original = np.zeros((9, 9, 3))
-        self.mask = np.zeros((9, 9, 3))
-        self.errors = np.zeros((9, 9, 3))
+        self.left = EMPTY_TENSOR
+        self.right = EMPTY_TENSOR
+        self.original = EMPTY_TENSOR
+        self.mask = EMPTY_TENSOR
+        self.errors = EMPTY_TENSOR
 
 
         self.image_select = 0
 
     def index(self, index: int):
         # Because python doesn't have POINTERS or MATCH STATEMENTS LIKE ANY OTHER LANGUAGE
-        if   index == 0: return self.right
+        if   index == 0: return self.original
         elif index == 1: return self.mask
         elif index == 2: return self.errors
 
@@ -108,6 +110,7 @@ class ImageWranger:
             original = cv2.imread(imageselect)
             self.right = original
             self.left = original
+            self.original = original
         except:
             return
 
@@ -196,7 +199,7 @@ class ExperimentInterface(ttk.Frame):
         self.material = "PbO2"
         self.state = state
         self.masked_state = 'normal' if self.master.image_handler.hasmask else 'disabled'
-        self.analysis = MaskAnalyzer(self.master.image_handler.mask, self.material, self.master.image_handler.hasmask)
+        self.analysis = MaskAnalyzer(self, self.master.image_handler.mask, self.material, self.master.image_handler.hasmask)
 
         self.create_widgets()
 
@@ -243,7 +246,8 @@ class ExperimentInterface(ttk.Frame):
              self.analysis.set(self.master.image_handler.mask, self.material, self.master.image_handler.hasmask),
              self.analysis.gradient_segmentation(),
              add_error_callback(),
-             self.master.update_image_interface(2))
+             self.master.console.update(),
+             self.master.update_image_interface(2)),
         )
         self.leg_error.grid(row=1, column=0, padx=10, pady=10)
 
@@ -294,16 +298,22 @@ class Interface(ttk.Frame):
         self.view_right.grid(row=1, column=1)
 
         # -------------- Show Mask ---------------
-        def show_mask_callback(mask: int): # Callback function because I forget how to write lambdas correctly
-            self.image_handler.showmask = mask
-            # Reverse False => True because I got something reversed somewhere
-            self.image_handler.showmask = not self.image_handler.showmask
-        show_mask = tk.IntVar()
-        self.listbox = ttk.Checkbutton(self, variable=show_mask, state=self.button_state, text="Show mask", command=lambda: (show_mask_callback(show_mask.get()), self.update_image_interface(1)))
-        self.listbox.place(x=740, y=417)
+        def option_callback(num: int):
+            self.image_handler.image_select = num
+            self.update_image_interface(2)
+        option_variable = tk.StringVar(self)
+        option_variable.set('Original')
+        choices = ["Original", "Mask", "Errors"]
+        self.options = tk.OptionMenu(self, option_variable, *choices,
+                                      command=lambda x: (option_callback(choices.index(option_variable.get()))))
+        self.options.grid(row=2, column=1, padx=25, sticky=tk.E)
 
         # -------------- Buttons ---------------
-        self.open_button = ttk.Button(self, text="Open Image", command=lambda: (self.image_handler.select_image(), self.change_state(True), self.update_image_interface(2), self.console.update()))
+        self.open_button = ttk.Button(self, text="Open Image", command=lambda:
+            (self.image_handler.select_image(),
+             self.change_state(True),
+             self.update_image_interface(2),
+             self.console.update()))
         self.open_button.grid(row=2, column=0, pady=10)
 
         self.save_button = ttk.Button(self, state=self.button_state, text="Save Image", command=lambda: (self.image_handler.write_image(), self.update_image_interface(2), self.console.update()))
