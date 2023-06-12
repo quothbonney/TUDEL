@@ -1,13 +1,15 @@
-import queue
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
+import ctypes
+import matplotlib.pyplot as plt
 from PIL import ImageTk, Image
 import cv2
 import numpy as np
 from tkinter import scrolledtext
 from src.selection import launch_select_window
 from src.mask import Mask
+import src.analysis
 import json
 
 
@@ -42,14 +44,55 @@ class Application(tk.Tk):
 
         self.resizable = False
 
+
+class MaskAnalyzer:
+    def __init__(self, image, material: str, auto_masked: bool):
+        # Image is the colored mask, image_mask is the pure boolean
+        self.image = image
+        self.material = material
+        self.auto_masked = auto_masked
+        self.error_mask = np.zeros((9, 9, 3))
+        # Error image not for scientific analysis. Visualization purposes only. Use error_mask
+        self.error_image = np.zeros((9, 9, 3))
+
+    # Alternative constructor for recalling object
+    def set(self, image, material: str, auto_masked: bool):
+        # Image is the colored mask, image_mask is the pure boolean
+        self.image = image
+        self.material = material
+        self.auto_masked = auto_masked
+        self.error_mask = np.zeros((9, 9, 3))
+        # Error image not for scientific analysis. Visualization purposes only. Use error_mask
+        self.error_image = np.zeros((9, 9, 3))
+
+    def gradient_segmentation(self):
+        self.error_mask = src.analysis.errors(self.material, self.image, is_auto=self.auto_masked)
+        # Create the green segmentation dots
+        green = np.zeros(self.image.shape, np.uint8)
+        green[:, :, 1] = 255
+        dst = cv2.bitwise_or(green, self.image, mask=self.error_mask)
+        self.error_image = cv2.addWeighted(dst, 0.5, self.image, 0.7, 0)
+
+
 class ImageWranger:
     def __init__(self):
         self.showmask = False
+        self.hasmask = False
         # Init to arbitrary zero matricies (avoids possible future errors)
         self.left = np.zeros((9, 9, 3))
         self.right = np.zeros((9, 9, 3))
         self.original = np.zeros((9, 9, 3))
         self.mask = np.zeros((9, 9, 3))
+        self.errors = np.zeros((9, 9, 3))
+
+
+        self.image_select = 0
+
+    def index(self, index: int):
+        # Because python doesn't have POINTERS or MATCH STATEMENTS LIKE ANY OTHER LANGUAGE
+        if   index == 0: return self.right
+        elif index == 1: return self.mask
+        elif index == 2: return self.errors
 
     def select_image(self):
         imageselect = filedialog.askopenfilename(initialdir="Desktop",
@@ -81,6 +124,8 @@ class ImageWranger:
         cropped = launch_select_window(self.left)
         SingletonTextHandler.add_message(f"Cropped image to size ({cropped.shape[0]}, {cropped.shape[1]})")
         self.right = cropped
+        self.hasmask = True
+        self.image_select = 1
 
     def auto_mask(self, material: str):
         lmask = Mask(material, self.right)
@@ -88,7 +133,16 @@ class ImageWranger:
         dep_masked = cv2.bitwise_and(self.right, self.right, mask=self.mask)
         self.mask = dep_masked
         SingletonTextHandler.add_message(f"Auto masked image by {material} color range")
+        self.hasmask = True
+        self.image_select = 1
 
+    def set_image(self, side: int, img_array):
+        if side == 0:
+            self.left = img_array
+        elif side == 1:
+            self.right = img_array
+        else:
+            raise Exception("Invalid side. Must be [0, 1]")
 
 class ImageView(tk.Label):
     def __init__(self, parent, *args, **kwargs):
@@ -135,6 +189,8 @@ class ExperimentInterface(ttk.Frame):
         self.grid(padx=25, pady=25)
         self.material = "PbO2"
         self.state = state
+        self.masked_state = 'normal' if self.master.image_handler.hasmask else 'disabled'
+        self.analysis = MaskAnalyzer(self.master.image_handler.mask, self.material, self.master.image_handler.hasmask)
 
         self.create_widgets()
 
@@ -142,24 +198,57 @@ class ExperimentInterface(ttk.Frame):
         self.material = option
 
     def create_widgets(self):
-        self.container = tk.Frame(self, width=200, height=500, relief=tk.RAISED, borderwidth=3)
-        self.container.grid(row=0, column=0, columnspan=1, sticky=(tk.N, tk.S, tk.W, tk.E))
+        # ------------ Mask Widgets -----------
+        self.mask_container = tk.Frame(self, width=200, height=500, relief=tk.RIDGE, borderwidth=3)
+        self.mask_container.grid(row=0, column=0, columnspan=1, sticky=(tk.N, tk.S, tk.W, tk.E))
 
         choices = [choice for choice in self.master.master.colormap]
         option_variable = tk.StringVar(self)
         option_variable.set('Select Type')
-        self.options = ttk.OptionMenu(self.container, option_variable, *choices, command=lambda: (self.change_material_callback(option_variable.get())))
+        self.options = ttk.OptionMenu(self.mask_container, option_variable, *choices, command=lambda: (self.change_material_callback(option_variable.get())))
         self.options.grid(row=0, column=0, padx=10, pady=10)
 
-        self.man_mask = ttk.Button(self.container, text="Manual Mask", state=self.state, command=lambda: (self.master.image_handler.manual_mask(), self.master.update_image_interface(2), self.master.console.update()))
+        self.man_mask = ttk.Button(self.mask_container, text="Manual Mask", state=self.state, command=lambda:
+            (self.master.image_handler.manual_mask(),
+             self.master.update_image_interface(2),
+             self.master.console.update(),
+             self.change_mask_state(True)))
+
         self.man_mask.grid(row=1, column=0, padx=10, pady=5)
 
-        self.auto_mask = ttk.Button(self.container, text="Auto Mask", state=self.state, command=lambda: (self.master.image_handler.auto_mask(self.material), self.master.update_image_interface(2), self.master.console.update()))
+        self.auto_mask = ttk.Button(self.mask_container, text="Auto Mask", state=self.state, command=lambda:
+            (self.master.image_handler.auto_mask(self.material),
+             self.master.update_image_interface(2),
+             self.master.console.update(),
+             self.change_mask_state(True)))
+
         self.auto_mask.grid(row=2, column=0, padx=10, pady=0)
 
+        # ------------ Mask Widgets -----------
+        self.a_container = tk.Frame(self, width=200, height=400, relief=tk.RIDGE, borderwidth=3)
+        self.a_container.grid(row=1, column=0, columnspan=1, sticky=(tk.N, tk.S, tk.W, tk.E))
+
+        def add_error_callback():
+            self.master.image_handler.image_select = 2
+            self.master.image_handler.errors = self.analysis.error_image
+
+        self.leg_error = ttk.Button(self.a_container, text="Gradient\nSegmentation", state=self.masked_state, command=lambda:
+        (
+             self.analysis.set(self.master.image_handler.mask, self.material, self.master.image_handler.hasmask),
+             self.analysis.gradient_segmentation(),
+             add_error_callback(),
+             self.master.update_image_interface(2))
+        )
+        self.leg_error.grid(row=1, column=0, padx=10, pady=10)
 
     def change_state(self, state: bool):
         self.state = 'normal' if state else 'disabled'
+
+        self.create_widgets()
+
+    def change_mask_state(self, state: bool):
+        self.masked_state = 'normal' if state else 'disabled'
+
         self.create_widgets()
 
 
@@ -205,12 +294,11 @@ class Interface(ttk.Frame):
             self.image_handler.showmask = not self.image_handler.showmask
         show_mask = tk.IntVar()
         self.listbox = ttk.Checkbutton(self, variable=show_mask, state=self.button_state, text="Show mask", command=lambda: (show_mask_callback(show_mask.get()), self.update_image_interface(1)))
-        self.listbox.place(x=740, y=405)
-
+        self.listbox.place(x=740, y=417)
 
         # -------------- Buttons ---------------
-        self.open_button = ttk.Button(self, text="Open Image", command=lambda: (self.image_handler.select_image(), self.change_state(1), self.update_image_interface(2), self.console.update()))
-        self.open_button.grid(row=2, column=0)
+        self.open_button = ttk.Button(self, text="Open Image", command=lambda: (self.image_handler.select_image(), self.change_state(True), self.update_image_interface(2), self.console.update()))
+        self.open_button.grid(row=2, column=0, pady=10)
 
         self.save_button = ttk.Button(self, state=self.button_state, text="Save Image", command=lambda: (self.image_handler.write_image(), self.update_image_interface(2), self.console.update()))
         self.save_button.grid(row=2, column=1)
@@ -239,7 +327,7 @@ class Interface(ttk.Frame):
 
         if side == 1:
             # Get the regular image, unless the mask is selected
-            imr = self.image_handler.right if self.image_handler.showmask else self.image_handler.mask
+            imr = self.image_handler.index(self.image_handler.image_select)
             self.view_right.set_image(imr)
         elif side == 0:
             iml = self.image_handler.left
@@ -247,7 +335,7 @@ class Interface(ttk.Frame):
         else:
             iml = self.image_handler.left
             self.view_left.set_image(iml)
-            imr = self.image_handler.right
+            imr = self.image_handler.index(self.image_handler.image_select)
             self.view_right.set_image(imr)
 
 if __name__ == "__main__":
