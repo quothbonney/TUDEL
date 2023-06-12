@@ -1,531 +1,349 @@
-from tkinter import *
+import tkinter as tk
+from tkinter import ttk
 from tkinter import filedialog
+import ctypes
+import matplotlib.pyplot as plt
 from PIL import ImageTk, Image
 import cv2
 import numpy as np
-import webbrowser
-from tkinter import messagebox
-from src.calibrate import calibrate
-from src import dimensions, analysis, selection
+from tkinter import scrolledtext
+from src.selection import launch_select_window
 from src.mask import Mask
-import json, threading
-import os
-
-
-original = 0
-# Init
-tk = Tk()
-
-tk.iconphoto(True, PhotoImage(file='imgs/icon.png'))
-
-f = open("data/spectrum.json")
-bound_map = json.load(f)
-
-windowWidth = tk.winfo_reqwidth()
-windowHeight = tk.winfo_reqheight()
-positionRight = int(tk.winfo_screenwidth() / 3 - windowWidth / 3)
-positionDown = int(tk.winfo_screenheight() / 3 - windowHeight / 1)
-
-tk.geometry(f"800x510+{positionRight}+{positionDown}")
-tk.resizable(width=False, height=False)
-
-tk.title("TU Digital Electrochemistry Lab")
-F1 = Frame(tk)
-F2 = None
-F3 = None
-F1.grid(row=0, column=0, pady=25, padx=25)
-l1 = Label(F1, text="Original Image", font="bold")
-l1.grid(row=0, column=0)
-L1 = Label(F1, text="Original", height="25", width="52", bd=0.5, relief="solid")
-L1.grid(row=1, column=0, pady=10, padx=15)
-l2 = Label(F1, text="Modified Image", font="bold")
-l2.grid(row=0, column=1)
-L2 = Label(F1, text="Modified", height="25", width="52", bd=0.5, relief="solid")
-L2.grid(row=1, column=1)
-global_return = 0
-
-is_auto_masked = None
-working_mask = [0]
-webcam_on = False
-
-
-def update_image(dst):
-    global global_return, L2
-    L2.config(image=None)
-    L2.image = None
-    global_return = dst
-    im = Image.fromarray(dst)
-    im.thumbnail((360, 360))
-    imgtk3 = ImageTk.PhotoImage(image=im)
-    L2 = Label(F1, image=imgtk3)
-    L2.image = imgtk3
-    L2.grid(row=1, column=1)
-    saveBTN.config(state="normal", cursor="hand2")
-
-
-# Image Select and Save
-
-def Webcam_Stream():
-    global tkimage
-    global hsv
-    global img_rgb
-    global capture
-    global webcam_on
-
-    capture = cv2.VideoCapture(0, cv2.CAP_ANY)
-
-    if not capture.isOpened():
-        messagebox.showerror("Error", "Webcam not found")
-        return
-
-    webcam_on = not webcam_on
-
-    def update_image_w(final=False):
-        global global_return
-        _, frame = capture.read()
-
-        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
-        im = Image.fromarray(img_rgb)
-        im.thumbnail((360, 360))
-        tkimage = ImageTk.PhotoImage(im)
-
-        L1 = Label(F1, image=tkimage)
-        L1.grid(row=1, column=0)
-        L1.image = tkimage
-        if final:
-            global_return = img_rgb
-            L2 = Label(F1, image=None)
-            L2.config(image=tkimage)
-            
-            L1.grid(row=1, column=0)
-            L2.grid(row=1, column=1)
-            saveBTN.config(state="normal", cursor="hand2")
-            tk.geometry("1200x510")
-        #tk.after(1, update_image) # Call again after 1 ms to keep updating the frame.
-
-    while webcam_on:
-        update_image_w()
-
-    update_image_w(True)
-
-
-
-    #L2 = Label(F1, image=None)
-    #L2.config(image=tkimage)
-
-
-def Image_Select():
-    global hsv
-    global tkimage
-    global original
-    global img_rgb
-    global imageselect
-    global global_return
-
-    imageselect = filedialog.askopenfilename(initialdir="Desktop",
-                                             filetypes=[('Image files', '*.png'), ('Image files', '*.jpg')])
-
-    if not imageselect:
-        return
-    print(imageselect)
-
-    try:
-        original = cv2.imread(imageselect)
-        global_return = original
-
-        im = Image.open(imageselect)
-        im.thumbnail((360, 360))
-        tkimage = ImageTk.PhotoImage(im)
-
-        img_rgb = np.array(im)
-
-        hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
-
-        # Widgetler
-        L1 = Label(F1, image=None)  # , image = tkimage)
-        L1.config(image=tkimage)
-
-        L2 = Label(F1, image=None)
-        L2.config(image=tkimage)
-
-        L1.grid(row=1, column=0)
-        L2.grid(row=1, column=1)
-        saveBTN.config(state="normal", cursor="hand2")
-        tk.geometry("1200x510")
-    except:
-        return
-
-    filemenu.entryconfig("Save as", state="normal")
-    menubar.entryconfig("Edit", state="normal")
-
-
-v1 = DoubleVar()
-v2 = DoubleVar()
-v3 = DoubleVar()
-v4 = DoubleVar()
-v5 = DoubleVar()
-v6 = DoubleVar()
-v7 = DoubleVar()
-v8 = DoubleVar()
-v9 = DoubleVar()
-v10 = DoubleVar()
-v11 = DoubleVar()
-
-
-def hsv_buttons():
-    global l_h
-    global l_s
-    global l_v
-    global u_h
-    global u_s
-    global u_v
-    global F2
-    global LabelHSV
-    if F3:
-        F3.grid_forget()
-        F3.destroy()
-    F2 = Frame(tk)
-    F2.place(x=900, y=50)
-
-    l_h_lbl = Label(F2, text="Calibration Complete.")
-    l_h_lbl.grid(row=0, column=0, sticky=W, padx="30")
-
-
-def analyze_buttons():
-    global global_return
-    global option_variable
-    global original
-
-    if option_variable.get() == 'Select Type':
-        messagebox.showerror('TUDEL', 'Error: Please select film type')
-
-    mask = Mask(option_variable.get(), global_return)
-    original_mask = mask.deposition_mask(global_return)
-    error_mask = analyze_img()
-
-    try:
-        ratio: str = analysis.percent_imp(error_mask, original_mask, global_return)
-    except ZeroDivisionError:
-        ratio: str = "0.0000"
-    F2 = Frame(tk)
-    F2.place(x=900, y=70)
-    lbl = Label(F2, text=f"Percent Imperfection: {ratio}")
-    lbl.grid(row=0, column=0, sticky=W, padx="30")
-
-    dst = analysis.show_errors(error_mask, global_return)
-    update_image(dst)
-
-
-def write_file():
-    global global_return
-    ret = cv2.cvtColor(global_return, cv2.COLOR_BGR2RGB)
-
-    filename = filedialog.asksaveasfilename(initialdir="Desktop", filetypes=[("PNG file", "*.png")])
-    if not filename:
-        return
-    cv2.imwrite(f"{filename}.png", ret)
-    label = Label(F1, text="Saved.", font="bold")
-    label.grid(row=2, column=1, pady=27)
-    label.after(2000, label.destroy)
-
-
-def calibrate_img(*args):
-    global global_return
-
-    global_return = calibrate(global_return, 2)
-
-    im = Image.fromarray(global_return)
-    im.thumbnail((360, 360))
-    imgtk3 = ImageTk.PhotoImage(image=im)
-
-    L2 = Label(F1, image=imgtk3)
-    L2.image = imgtk3
-
-    L2.grid(row=1, column=1)
-    saveBTN.config(state="normal", cursor="hand2")
-
-
-def analyze_img(*args):
-    global global_return
-    global option_variable
-    global is_auto_masked
-
-    if option_variable.get() == 'Select Type':
-        messagebox.showerror('TUDEL', 'Error: Please select film type')
-        return
-
-    if is_auto_masked == None:
-        messagebox.showerror('TUDEL', 'Error: No mask selected.')
-        return
-
-    print(is_auto_masked)
-    error_mask = analysis.errors(option_variable.get(), global_return, is_auto=is_auto_masked)
-
-    return error_mask
-
-    cv2.waitKey(0)
-
-
-def mask_img():
-    global global_return
-    global option_variable
-    global working_mask
-
-    mask = Mask(option_variable.get(), global_return)
-    original_mask = mask.deposition_mask(global_return)
-    working_mask = original_mask
-
-    dep_masked = cv2.bitwise_and(global_return, global_return, mask=original_mask)
-    update_image(dep_masked)
-    global_return = dep_masked
-
-    menubar.entryconfig("Analysis", state="normal")
-    return dep_masked
-
-
-def dimension_img(*args):
-    global option_variable
-
-    if option_variable.get() == 'Select Type':
-        messagebox.showerror('TUDEL', 'Error: Please select film type')
-
-    width = dimensions.size(original, option_variable.get())
-    F2 = Frame(tk)
-    F2.place(x=900, y=90)
-
-    a = Label(F2, text=f"Width: {width}px")
-    a.grid(row=0, column=0, sticky=W, padx="30")
-
-    new = cv2.rotate(original, cv2.ROTATE_90_CLOCKWISE)
-    height = dimensions.size(new, option_variable.get())
-    F3 = Frame(tk)
-    F3.place(x=900, y=110)
-    b = Label(F3, text=f"Height: {height}px")
-    b.grid(row=0, column=0, sticky=W, padx="30")
-
-    F4 = Frame(tk)
-    F4.place(x=900, y=130)
-    c = Label(F4, text=f"Surface Area: {str(round(float(height) * float(width), 4))}px^2")
-    c.grid(row=0, column=0, sticky=W, padx="30")
-
-    F5 = Frame(tk)
-    F5.place(x=900, y=150)
-    d = Label(F5,
-              text=f"\n\nNOTE: Values are in pixels. To get value in mm,\n divide by number of pixels in 1mm by \naligning film with a calibration slide.")
-    d.grid(row=0, column=0, sticky=W, padx="30")
-
-
-def calibrate_button():
-    threading.Thread(target=calibrate_img).start()
-    threading.Thread(target=hsv_buttons).start()
-
-
-def analysis_button():
-    threading.Thread(target=analyze_buttons).start()
-
-
-def dimension_button():
-    threading.Thread(target=dimension_img).start()
-
-
-def mask_button():
-    global is_auto_masked
-    is_auto_masked = True
-    threading.Thread(target=mask_img).start()
-
-
-def manual_mask_button():
-    global global_return
-    global is_auto_masked
-    global working_mask
-    is_auto_masked = False
-
-    # Get the ratio between width and height in order to resize from size of one side
-    shp: tuple = global_return.shape
-    height_width_ratio = shp[0] / shp[1]
-    size = 900
-    dim = (size, int(size * height_width_ratio))
-
-    # Get the points of the selected area
-    resized = cv2.resize(global_return, dim, interpolation=cv2.INTER_AREA)
-    left, top, right, bottom = selection.main(resized)
-
-    rescaling_factor = shp[1] / size
-    print(rescaling_factor)
-    left = int(left * rescaling_factor)
-    top = int(top * rescaling_factor)
-    right = int(right * rescaling_factor)
-    bottom = int(bottom * rescaling_factor)
-
-    # Ensure that it won't slice backwards
-    if top > bottom:
-        bottom, top = top, bottom
-    if left > right:
-        right, left = left, right
-
-    # Numpy slicing crop that I refuse to believe I'm smart enough to have thought of myself
-    cropped = global_return[top:bottom, left:right]
-
-    working_mask = cv2.cvtColor(cropped, cv2.COLOR_RGB2HSV)
-    global_return = cropped
-
-    update_image(global_return)
-
-
-def reset():
-    global global_return, original
-    global_return = original
-    update_image(global_return)
-
-
-def trgt2():
-    threading.Thread(target=Image_Select).start()
-
-def webcamtrgt():
-    threading.Thread(target=Webcam_Stream).start()
-
-
-def trgt3():
-    threading.Thread(target=write_file).start()
-
-
-# Open Button
-B1 = Button(tk, text="Open Image", command=trgt2)
-B1.config(cursor="hand2")
-B1.place(x=160, y=450)
-
-BWeb = Button(tk, text="Toggle Webcam", command=webcamtrgt)
-BWeb.config(cursor="hand2")
-BWeb.place(x=200, y=450)
-
-# Save as Button
-saveBTN = Button(tk, text="Save As", command=trgt3)
-saveBTN.config(state="disabled")
-saveBTN.place(x=565, y=450)
-
-# Calibrate Button
-hsv_btn = Button(tk, text="Calibrate", width=13, command=calibrate_button)
-hsv_btn.bind("<ButtonRelease-1>", calibrate_img)
-hsv_btn.config(cursor="hand2")
-hsv_btn.place(x=800, y=80)
-
-# Analysis Button
-hsv_btn = Button(tk, text="Analyze", width=13, command=analysis_button)
-hsv_btn.bind("<ButtonRelease-1>", analyze_img)
-hsv_btn.config(cursor="hand2")
-hsv_btn.place(x=800, y=115)
-
-# Dimensions Button
-hsv_btn = Button(tk, text="Dimensions", width=13, command=dimension_button)
-hsv_btn.config(cursor="hand2")
-hsv_btn.place(x=800, y=150)
-
-# Auto Mask Button
-hsv_btn = Button(tk, text="Auto Mask", width=13, command=mask_button)
-hsv_btn.config(cursor="hand2")
-hsv_btn.place(x=800, y=250)
-
-# Manual Mask Button
-hsv_btn = Button(tk, text="Manual Mask", width=13, command=manual_mask_button)
-hsv_btn.config(cursor="hand2")
-hsv_btn.place(x=800, y=285)
-
-# Choice button
-choices = [choice for choice in bound_map]
-option_variable = StringVar(tk)
-option_variable.set('Select Type')
-w = OptionMenu(tk, option_variable, *choices)
-w.place(x=800, y=35)
-
-# Reset button
-reset_btn = Button(tk, text="Reset", width=9, command=reset)
-reset_btn.config(cursor="hand2")
-reset_btn.place(x=800, y=450)
-
-
-# Menu Bar
-
-def lines(*args):
-    w = analysis.line_analysis(global_return)
-    analysis.show_line_analysis(w)
-
-
-def sat():
-    sats = analysis.saturation_histogram(global_return, channel_num=1)  # Saturation channel
-    analysis.show_saturations(sats, "Saturation")
-
-
-def vals():
-    val = analysis.saturation_histogram(global_return, channel_num=2)  # Value channel
-    analysis.show_saturations(val, "Value")
-
-def hues():
-    val = analysis.saturation_histogram(global_return, channel_num=0)  # Value channel
-    analysis.show_saturations(val, "Hue")
-
-
-def callback(url):
-    webbrowser.open_new(url)
-
-
-def new_window():
-    os.system("python3 ./application.py")
-
-
-def donothing():
-    filewin = Toplevel(root)
-    button = Button(filewin, text="Do nothing button")
-    button.pack()
-
-
-menubar = Menu(tk)
-
-# File bar
-filemenu = Menu(menubar, tearoff=0)
-filemenu.add_command(label="New Window", command=new_window)
-filemenu.add_command(label="Open", command=trgt2)
-filemenu.add_command(label="Save as", command=trgt3)
-
-filemenu.add_separator()
-
-# Save as is disabled by default to avoid error
-filemenu.entryconfig("Save as", state="disabled")
-
-filemenu.add_command(label="Exit", command=tk.quit)
-menubar.add_cascade(label="File", menu=filemenu)
-
-# Edit menu
-editmenu = Menu(menubar, tearoff=0)
-editmenu.add_command(label="Reset", command=reset)
-
-editmenu.add_separator()
-
-editmenu.add_command(label="Calibrate", command=calibrate_button)
-editmenu.add_command(label="Dimension", command=dimension_button)
-
-editmenu.add_separator()
-
-editmenu.add_command(label="Auto Mask", command=mask_button)
-editmenu.add_command(label="Manual Mask", command=manual_mask_button)
-
-menubar.add_cascade(label="Edit", menu=editmenu)
-menubar.entryconfig("Edit", state="disabled")
-
-# Analysis bar
-analysisbar = Menu(menubar, tearoff=0)
-
-analysisbar.add_command(label="Imperfection", command=analysis_button)
-analysisbar.add_command(label="Line by Line", command=lines)
-analysisbar.add_command(label="Saturation", command=sat)
-
-analysisbar.add_command(label="Value", command=vals)
-analysisbar.add_command(label="Hues", command=hues)
-
-menubar.add_cascade(label="Analysis", menu=analysisbar)
-menubar.entryconfig("Analysis", state="disabled")
-
-tk.config(menu=menubar)
-
-tk.mainloop()
-f.close()
+import src.analysis
+import json
+
+
+class SingletonTextHandler:
+    _instance = None
+    # Holds messages in an array, indexes the last element of the array
+    messages = [" "]
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(SingletonTextHandler, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
+
+    @classmethod
+    def add_message(cls, message):
+        cls.messages.append(message)
+
+
+class Application(tk.Tk):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.title("TU Digital Electrochemistry Lab")
+        self.geometry("1200x800")
+        self.iconphoto(True, tk.PhotoImage(file='imgs/icon.png'))
+
+        cm = open("data/spectrum.json")
+        self.colormap = json.load(cm)
+
+        self.image_handler = ImageWranger()
+        self.interface = Interface(self)
+
+        self.resizable = False
+
+
+class MaskAnalyzer:
+    def __init__(self, image, material: str, auto_masked: bool):
+        # Image is the colored mask, image_mask is the pure boolean
+        self.image = image
+        self.material = material
+        self.auto_masked = auto_masked
+        self.error_mask = np.zeros((9, 9, 3))
+        # Error image not for scientific analysis. Visualization purposes only. Use error_mask
+        self.error_image = np.zeros((9, 9, 3))
+
+    # Alternative constructor for recalling object
+    def set(self, image, material: str, auto_masked: bool):
+        # Image is the colored mask, image_mask is the pure boolean
+        self.image = image
+        self.material = material
+        self.auto_masked = auto_masked
+        self.error_mask = np.zeros((9, 9, 3))
+        # Error image not for scientific analysis. Visualization purposes only. Use error_mask
+        self.error_image = np.zeros((9, 9, 3))
+
+    def gradient_segmentation(self):
+        self.error_mask = src.analysis.errors(self.material, self.image, is_auto=self.auto_masked)
+        # Create the green segmentation dots
+        green = np.zeros(self.image.shape, np.uint8)
+        green[:, :, 1] = 255
+        dst = cv2.bitwise_or(green, self.image, mask=self.error_mask)
+        self.error_image = cv2.addWeighted(dst, 0.5, self.image, 0.7, 0)
+        dstgreen = cv2.bitwise_and(green, green, mask=self.error_mask)
+        error_size = src.analysis.mask_size(dstgreen)
+        deposit_size = src.analysis.mask_size(self.image)
+        print(error_size/deposit_size)
+
+
+class ImageWranger:
+    def __init__(self):
+        self.showmask = False
+        self.hasmask = False
+        # Init to arbitrary zero matricies (avoids possible future errors)
+        self.left = np.zeros((9, 9, 3))
+        self.right = np.zeros((9, 9, 3))
+        self.original = np.zeros((9, 9, 3))
+        self.mask = np.zeros((9, 9, 3))
+        self.errors = np.zeros((9, 9, 3))
+
+
+        self.image_select = 0
+
+    def index(self, index: int):
+        # Because python doesn't have POINTERS or MATCH STATEMENTS LIKE ANY OTHER LANGUAGE
+        if   index == 0: return self.right
+        elif index == 1: return self.mask
+        elif index == 2: return self.errors
+
+    def select_image(self):
+        imageselect = filedialog.askopenfilename(initialdir="Desktop",
+                                             filetypes=[('Image files', '*.png'), ('Image files', '*.jpg'), ('Image files', '*.tif')])
+        if not imageselect:
+            return
+
+        try:
+            original = cv2.imread(imageselect)
+            self.right = original
+            self.left = original
+        except:
+            return
+
+        SingletonTextHandler.add_message(f"Opened image {imageselect} successfully")
+
+    def write_image(self):
+        ret = cv2.cvtColor(self.right, cv2.COLOR_BGR2RGB)
+
+        filename = filedialog.asksaveasfilename(initialdir="Desktop", filetypes=[("PNG file", "*.png")])
+        if not filename:
+            return
+        cv2.imwrite(f"{filename}.png", ret)
+        SingletonTextHandler.add_message(f"Wrote image successfully to {filename}")
+
+        return True
+
+    def manual_mask(self):
+        cropped = launch_select_window(self.left)
+        SingletonTextHandler.add_message(f"Cropped image to size ({cropped.shape[0]}, {cropped.shape[1]})")
+        self.mask = cropped
+        self.right = cropped
+        self.hasmask = True
+        self.image_select = 1
+
+    def auto_mask(self, material: str):
+        lmask = Mask(material, self.right)
+        self.mask = lmask.deposition_mask(self.right)
+        dep_masked = cv2.bitwise_and(self.right, self.right, mask=self.mask)
+        self.mask = dep_masked
+        SingletonTextHandler.add_message(f"Auto masked image by {material} color range")
+        self.hasmask = True
+        self.right = self.mask
+        self.image_select = 1
+
+    def set_image(self, side: int, img_array):
+        if side == 0:
+            self.left = img_array
+        elif side == 1:
+            self.right = img_array
+        else:
+            raise Exception("Invalid side. Must be [0, 1]")
+
+class ImageView(tk.Label):
+    def __init__(self, parent, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+        self.image = None
+
+    def set_image(self, image_array):
+        """Loads and sets the image for this widget."""
+        img = cv2.cvtColor(image_array, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(img)
+        # Shrinks the image down to size for the boxes (only done on the frontend)
+        img.thumbnail((360, 360))
+        self.image = ImageTk.PhotoImage(img)
+        self.config(image=self.image)
+
+class ConsoleView(scrolledtext.ScrolledText):
+    def __init__(self, parent, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+        self.configure(height="12", padx="12", pady="12", wrap=tk.WORD, state="disabled")
+        self.q = SingletonTextHandler()
+
+    def update(self):
+        # Indexes the most recent message in the message buffer and writes it
+        message = self.q.messages[-1]
+        self.write_message(message)
+
+        print(self.q.messages[-1])
+
+    def write_message(self, message):
+        # For some reason the ScrollingText will not update unless it is marked as being in the normal state
+        # We are just rolling with it. a 2ms flicker is the least awful thing about this program
+        self.configure(state="normal")
+        self.insert(tk.END, message + '\n')
+        self.configure(state="disabled")
+
+    def clear_console(self):
+        """Clears the console view."""
+        self.delete('1.0', tk.END)
+
+class ExperimentInterface(ttk.Frame):
+    def __init__(self, master, state='disabled'):
+        super().__init__(master)
+        self.master: Interface = master
+        self.grid(padx=25, pady=25)
+        self.material = "PbO2"
+        self.state = state
+        self.masked_state = 'normal' if self.master.image_handler.hasmask else 'disabled'
+        self.analysis = MaskAnalyzer(self.master.image_handler.mask, self.material, self.master.image_handler.hasmask)
+
+        self.create_widgets()
+
+    def change_material_callback(self, option: str):
+        self.material = option
+
+    def create_widgets(self):
+        # ------------ Mask Widgets -----------
+        self.mask_container = tk.Frame(self, width=200, height=500, relief=tk.RIDGE, borderwidth=3)
+        self.mask_container.grid(row=0, column=0, columnspan=1, sticky=(tk.N, tk.S, tk.W, tk.E))
+
+        choices = [choice for choice in self.master.master.colormap]
+        option_variable = tk.StringVar(self)
+        option_variable.set('Select Type')
+        self.options = ttk.OptionMenu(self.mask_container, option_variable, *choices, command=lambda: (self.change_material_callback(option_variable.get())))
+        self.options.grid(row=0, column=0, padx=10, pady=10)
+
+        self.man_mask = ttk.Button(self.mask_container, text="Manual Mask", state=self.state, command=lambda:
+            (self.master.image_handler.manual_mask(),
+             self.master.update_image_interface(2),
+             self.master.console.update(),
+             self.change_mask_state(True)))
+
+        self.man_mask.grid(row=1, column=0, padx=10, pady=5)
+
+        self.auto_mask = ttk.Button(self.mask_container, text="Auto Mask", state=self.state, command=lambda:
+            (self.master.image_handler.auto_mask(self.material),
+             self.master.update_image_interface(2),
+             self.master.console.update(),
+             self.change_mask_state(True)))
+
+        self.auto_mask.grid(row=2, column=0, padx=10, pady=0)
+
+        # ------------ Mask Widgets -----------
+        self.a_container = tk.Frame(self, width=200, height=400, relief=tk.RIDGE, borderwidth=3)
+        self.a_container.grid(row=1, column=0, columnspan=1, sticky=(tk.N, tk.S, tk.W, tk.E))
+
+        def add_error_callback():
+            self.master.image_handler.image_select = 2
+            self.master.image_handler.errors = self.analysis.error_image
+
+        self.leg_error = ttk.Button(self.a_container, text="Gradient\nSegmentation", state=self.masked_state, command=lambda:
+        (
+             self.analysis.set(self.master.image_handler.mask, self.material, self.master.image_handler.hasmask),
+             self.analysis.gradient_segmentation(),
+             add_error_callback(),
+             self.master.update_image_interface(2))
+        )
+        self.leg_error.grid(row=1, column=0, padx=10, pady=10)
+
+    def change_state(self, state: bool):
+        self.state = 'normal' if state else 'disabled'
+
+        self.create_widgets()
+
+    def change_mask_state(self, state: bool):
+        self.masked_state = 'normal' if state else 'disabled'
+
+        self.create_widgets()
+
+
+class Interface(ttk.Frame):
+    def __init__(self, master: Application):
+        super().__init__(master)
+        self.master = master
+        self.image_handler = master.image_handler
+        self.grid(pady=25, padx=25)
+        self.button_state = 'disabled'
+
+        self.create_widgets()
+
+
+    def change_state(self, state: bool):
+        self.button_state = 'normal' if state else 'disabled'
+        self.create_widgets()
+
+    def create_widgets(self):
+        # ------------- Image Boxes/Labels -------------
+        # Labels for Left side
+        self.label_left = ttk.Label(self, text="Original Image", font="bold")
+        self.label_left.grid(row=0, column=0)
+        # Bounding box of image
+        self.label_view_left = tk.Label(self, text="Original", height="19", width="52", bd=0.5, relief="solid")
+        self.label_view_left.grid(row=1, column=0, pady=10, padx=10)
+        # ImageView containing the original image
+        self.view_left = ImageView(self, image=None)
+        self.view_left.grid(row=1, column=0)
+
+        # Same thing going on here
+        self.label_right = ttk.Label(self, text="Modified Image", font="bold")
+        self.label_right.grid(row=0, column=1)
+        self.label_view_right = tk.Label(self, text="Modified", height="19", width="52", bd=0.5, relief="solid")
+        self.label_view_right.grid(row=1, column=1, pady=10, padx=10)
+        self.view_right = ImageView(self, text="Modified")
+        self.view_right.grid(row=1, column=1)
+
+        # -------------- Show Mask ---------------
+        def show_mask_callback(mask: int): # Callback function because I forget how to write lambdas correctly
+            self.image_handler.showmask = mask
+            # Reverse False => True because I got something reversed somewhere
+            self.image_handler.showmask = not self.image_handler.showmask
+        show_mask = tk.IntVar()
+        self.listbox = ttk.Checkbutton(self, variable=show_mask, state=self.button_state, text="Show mask", command=lambda: (show_mask_callback(show_mask.get()), self.update_image_interface(1)))
+        self.listbox.place(x=740, y=417)
+
+        # -------------- Buttons ---------------
+        self.open_button = ttk.Button(self, text="Open Image", command=lambda: (self.image_handler.select_image(), self.change_state(True), self.update_image_interface(2), self.console.update()))
+        self.open_button.grid(row=2, column=0, pady=10)
+
+        self.save_button = ttk.Button(self, state=self.button_state, text="Save Image", command=lambda: (self.image_handler.write_image(), self.update_image_interface(2), self.console.update()))
+        self.save_button.grid(row=2, column=1)
+
+        # -------------- Experiments Interface ---------------
+        self.divider = ttk.Separator(self, orient="vertical")
+        self.divider.grid(row=2, column=0)
+
+        self.experiments = ExperimentInterface(self)
+        self.experiments.grid(column=2, row=1, sticky=(tk.N))
+
+        # -------------- Console ---------------
+        self.console = ConsoleView(self)
+        self.console.grid(column=0, row=3, columnspan=2, sticky=(tk.N, tk.S, tk.W, tk.E))
+
+    def update_image_interface(self, side: int):
+        # Change button states depending on image loaded
+        if self.image_handler.left is not None:
+            self.save_button.config(state="normal")
+            self.experiments.change_state(True)
+        else:
+            self.save_button.config(state="disabled")
+
+        if side not in (0, 1, 2):
+            raise Exception("Side must be (0, 1, 2)")
+
+        if side == 1:
+            # Get the regular image, unless the mask is selected
+            imr = self.image_handler.index(self.image_handler.image_select)
+            self.view_right.set_image(imr)
+        elif side == 0:
+            iml = self.image_handler.left
+            self.view_left.set_image(iml)
+        else:
+            iml = self.image_handler.left
+            self.view_left.set_image(iml)
+            imr = self.image_handler.index(self.image_handler.image_select)
+            self.view_right.set_image(imr)
+
+if __name__ == "__main__":
+    app = Application()
+    app.mainloop()
