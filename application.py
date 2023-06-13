@@ -9,6 +9,8 @@ import numpy as np
 from tkinter import scrolledtext
 from src.selection import launch_select_window
 from src.mask import Mask
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import threading
 import src.analysis
 import json
 
@@ -153,6 +155,7 @@ class ImageWranger:
         else:
             raise Exception("Invalid side. Must be [0, 1]")
 
+
 class ImageView(tk.Label):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
@@ -166,6 +169,7 @@ class ImageView(tk.Label):
         img.thumbnail((360, 360))
         self.image = ImageTk.PhotoImage(img)
         self.config(image=self.image)
+
 
 class ConsoleView(scrolledtext.ScrolledText):
     def __init__(self, parent, *args, **kwargs):
@@ -191,6 +195,42 @@ class ConsoleView(scrolledtext.ScrolledText):
         """Clears the console view."""
         self.delete('1.0', tk.END)
 
+
+class Histogram(tk.Tk):
+    def __init__(self, image):
+        plt.switch_backend('agg')
+        tk.Tk.__init__(self)
+        self.title("Updating Histogram")
+        img_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+
+        # Split the HSV image into H, S, V arrays
+        self.h, self.s, self.v = cv2.split(img_hsv)
+
+        # Create a Figure and a Canvas
+        self.fig, self.ax = plt.subplots()
+        self.canvas = FigureCanvasTkAgg(self.fig, self)
+        self.canvas.get_tk_widget().pack()
+
+        # Start a thread that updates the histogram
+        threading.Thread(target=self.update_histogram, daemon=True).start()
+
+    def update_histogram(self):
+        while True:
+            # Generate some random data
+
+            # Update the histogram
+            self.ax.cla()  # Clear the plot
+            self.ax.hist(self.h.ravel(), bins=256, color='red', alpha=0.3, label='Hue')
+            self.ax.hist(self.s.ravel(), bins=256, color='green', alpha=0.3, label='Saturation')
+            self.ax.hist(self.v.ravel(), bins=256, color='blue', alpha=0.3, label='Value')
+
+            # Redraw the canvas
+            self.canvas.draw()
+
+            # Wait a bit
+            self.after(1000)
+
+
 class ExperimentInterface(ttk.Frame):
     def __init__(self, master, state='disabled'):
         super().__init__(master)
@@ -209,7 +249,7 @@ class ExperimentInterface(ttk.Frame):
     def create_widgets(self):
         # ------------ Mask Widgets -----------
         self.mask_container = tk.Frame(self, width=200, height=500, relief=tk.RIDGE, borderwidth=3)
-        self.mask_container.grid(row=0, column=0, columnspan=1, sticky=(tk.N, tk.S, tk.W, tk.E))
+        self.mask_container.grid(row=0, column=0,  sticky=(tk.N, tk.S, tk.W))
 
         choices = [choice for choice in self.master.master.colormap]
         option_variable = tk.StringVar(self)
@@ -235,7 +275,7 @@ class ExperimentInterface(ttk.Frame):
 
         # ------------ Mask Widgets -----------
         self.a_container = tk.Frame(self, width=200, height=400, relief=tk.RIDGE, borderwidth=3)
-        self.a_container.grid(row=1, column=0, columnspan=1, sticky=(tk.N, tk.S, tk.W, tk.E))
+        self.a_container.grid(row=1, column=0, sticky=(tk.N, tk.S, tk.W))
 
         def add_error_callback():
             self.master.image_handler.image_select = 2
@@ -249,7 +289,27 @@ class ExperimentInterface(ttk.Frame):
              self.master.console.update(),
              self.master.update_image_interface(2)),
         )
-        self.leg_error.grid(row=1, column=0, padx=10, pady=10)
+        self.leg_error.grid(row=1, column=0, padx=10, pady=5)
+
+        self.pixelarea = ttk.Button(self.a_container, text="Pixel Area", state=self.masked_state, command=lambda:
+        (
+            SingletonTextHandler.add_message(f"Masked area is {src.analysis.mask_size(self.master.image_handler.right)} pixels"),
+            self.master.console.update(),
+            self.master.update_image_interface(2)),
+                                    )
+        self.pixelarea.grid(row=2, column=0, padx=10, pady=0)
+
+
+        # ------------ View Widgets -----------
+        self.v_container = tk.Frame(self, width=200, height=400, relief=tk.RIDGE, borderwidth=3)
+        self.v_container.grid(row=0, column=2, columnspan=1, sticky=(tk.N, tk.S, tk.E))
+
+        self.leg_error = ttk.Button(self.v_container, text="Show\nHistogram", state=self.masked_state, command=lambda:
+        (
+             Histogram(image=self.master.image_handler.right)
+        ))
+        self.leg_error.grid(row=0, column=0, padx=10, pady=5)
+
 
     def change_state(self, state: bool):
         self.state = 'normal' if state else 'disabled'
