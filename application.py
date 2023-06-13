@@ -197,38 +197,43 @@ class ConsoleView(scrolledtext.ScrolledText):
 
 
 class Histogram(tk.Tk):
-    def __init__(self, image):
-        plt.switch_backend('agg')
+    def __init__(self, master):
         tk.Tk.__init__(self)
-        self.title("Updating Histogram")
-        img_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        self.title("Color Histogram")
+        self.master = master
 
-        # Split the HSV image into H, S, V arrays
-        self.h, self.s, self.v = cv2.split(img_hsv)
 
         # Create a Figure and a Canvas
         self.fig, self.ax = plt.subplots()
         self.canvas = FigureCanvasTkAgg(self.fig, self)
         self.canvas.get_tk_widget().pack()
 
+        self.button1 = tk.Button(self, text="Update", command=self.update_histogram)
+        self.button1.pack(side=tk.LEFT)
         # Start a thread that updates the histogram
-        threading.Thread(target=self.update_histogram, daemon=True).start()
+        #threading.Thread(target=self.update_histogram, daemon=True).start()
+        self.update_histogram()
 
     def update_histogram(self):
-        while True:
-            # Generate some random data
+        # Generate some random data
+        image = self.master.master.image_handler.right
+        # Update the histogram
+        self.ax.cla()  # Clear the plot
+        img_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
 
-            # Update the histogram
-            self.ax.cla()  # Clear the plot
-            self.ax.hist(self.h.ravel(), bins=256, color='red', alpha=0.3, label='Hue')
-            self.ax.hist(self.s.ravel(), bins=256, color='green', alpha=0.3, label='Saturation')
-            self.ax.hist(self.v.ravel(), bins=256, color='blue', alpha=0.3, label='Value')
+        # Split the HSV image into H, S, V arrays
+        self.h, self.s, self.v = cv2.split(img_hsv)
+        filh = self.h.flatten()[self.h.flatten() > 10]
+        fils = self.s.flatten()[self.s.flatten() > 10]
+        filv = self.v.flatten()[self.v.flatten() > 10]
+        self.ax.hist(filh, bins=256, color='red', alpha=0.5, label='Hue', range=(0, 255))
+        self.ax.hist(fils, bins=256, color='green', alpha=0.5, label='Saturation', range=(0, 255))
+        self.ax.hist(filv, bins=256, color='blue', alpha=0.5, label='Value', range=(0, 255))
+        self.ax.legend()
+        # Redraw the canvas
+        self.canvas.draw()
 
-            # Redraw the canvas
-            self.canvas.draw()
-
-            # Wait a bit
-            self.after(1000)
+        # Wait a bit
 
 
 class ExperimentInterface(ttk.Frame):
@@ -280,6 +285,7 @@ class ExperimentInterface(ttk.Frame):
         def add_error_callback():
             self.master.image_handler.image_select = 2
             self.master.image_handler.errors = self.analysis.error_image
+            self.master.image_handler.right = self.analysis.error_image
 
         self.leg_error = ttk.Button(self.a_container, text="Gradient\nSegmentation", state=self.masked_state, command=lambda:
         (
@@ -304,12 +310,8 @@ class ExperimentInterface(ttk.Frame):
         self.v_container = tk.Frame(self, width=200, height=400, relief=tk.RIDGE, borderwidth=3)
         self.v_container.grid(row=0, column=2, columnspan=1, sticky=(tk.N, tk.S, tk.E))
 
-        self.leg_error = ttk.Button(self.v_container, text="Show\nHistogram", state=self.masked_state, command=lambda:
-        (
-             Histogram(image=self.master.image_handler.right)
-        ))
+        self.leg_error = ttk.Button(self.v_container, text="Show\nHistogram", state=self.masked_state, command=lambda: (Histogram(self)))
         self.leg_error.grid(row=0, column=0, padx=10, pady=5)
-
 
     def change_state(self, state: bool):
         self.state = 'normal' if state else 'disabled'
