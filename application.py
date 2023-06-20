@@ -13,6 +13,11 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import threading
 import src.analysis
 import json
+from src.unet import UNet
+import torch
+import torch.nn.functional as F
+from torchvision import transforms
+from kornia.color import rgb_to_hsv
 
 EMPTY_TENSOR = np.zeros((9, 9, 3),dtype=np.uint8)
 
@@ -59,6 +64,12 @@ class MaskAnalyzer:
         # Error image not for scientific analysis. Visualization purposes only. Use error_mask
         self.error_image = EMPTY_TENSOR
 
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+        self.model = UNet(n_channels=3, n_classes=1)
+        self.model.load_state_dict(torch.load("data/tudel_unet.1", map_location=torch.device(self.device)))
+
+
     # Alternative constructor for recalling object
     def set(self, image, material: str, auto_masked: bool):
         # Image is the colored mask, image_mask is the pure boolean
@@ -68,18 +79,91 @@ class MaskAnalyzer:
         self.error_mask = EMPTY_TENSOR
         # Error image not for scientific analysis. Visualization purposes only. Use error_mask
         self.error_image = EMPTY_TENSOR
+        self.neural_heatmap = EMPTY_TENSOR
+
+    
+    def discretize_heatmap(self, threshold, green):
+        omask = torch.where(torch.tensor(self.neural_heatmap) > threshold, torch.tensor(1.0), torch.tensor(0.0)).to(torch.uint8).numpy()
+        self.error_mask = omask
+        ori_sz = self.image.shape
+        dst = cv2.bitwise_or(green, np.zeros(green.shape, dtype=np.uint8), mask=omask)
+        resize_transform = transforms.Resize((ori_sz[0], ori_sz[1]))
+
+        dst2 = torch.tensor(dst).permute((2,0,1))
+        dst3 = resize_transform(dst2).permute((1,2,0))
+        self.error_image = cv2.addWeighted(dst3.numpy(), 0.5, self.image, 0.7, 0)
 
     def gradient_segmentation(self):
         self.error_mask = src.analysis.errors(self.material, self.image, is_auto=self.auto_masked)
+        print("errormask:  ", self.error_mask.shape)
         # Create the green segmentation dots
         green = np.zeros(self.image.shape, np.uint8)
         green[:, :, 1] = 255
         dst = cv2.bitwise_or(green, self.image, mask=self.error_mask)
+        print("errorimg:  ", self.image.shape)
+        print("green:  ", green.shape)
         self.error_image = cv2.addWeighted(dst, 0.5, self.image, 0.7, 0)
         dstgreen = cv2.bitwise_and(green, green, mask=self.error_mask)
         error_size = src.analysis.mask_size(dstgreen)
         deposit_size = src.analysis.mask_size(self.image)
         SingletonTextHandler.add_message(f"Percent Imperfection: {round((error_size/deposit_size)*100, 5)}%")
+
+    def neural_segmentation(self, input_size=512, output_size=512):
+        cv2.imwrite("test.png", self.image)
+        ori_sz = self.image.shape
+        t = transforms.Resize((input_size, input_size))(Image.fromarray(self.image))
+        t = transforms.ToTensor()(t)
+
+        # Convert the image to grayscale
+        gray = cv2.cvtColor(t.permute((1,2,0)).numpy() * 255, cv2.COLOR_BGR2GRAY)
+
+        # Create a binary mask where black pixels are 1 and others are 0
+        _, binary = cv2.threshold(gray, 1, 1, cv2.THRESH_BINARY_INV)
+        cv2.imshow("test", t.permute((1,2,0)).numpy())
+        # Create a 7x7 kernel filled with ones
+        kernel = np.ones((ori_sz[0] // 10, ori_sz[1] // 10), np.uint8)
+
+        # Convolve the binary image with your kernel
+        blackness_heatmap = cv2.filter2D(binary, -1, kernel)
+        normalized_blackness_heatmap  = abs(1 - (blackness_heatmap / np.max(blackness_heatmap))) ** 2
+        plt.imshow(blackness_heatmap)
+        output = torch.zeros((input_size, input_size))
+        self.model = self.model.to(self.device)
+        g_img = rgb_to_hsv(t).permute((1,2,0))
+
+        # Loop over the image patch by patch
+        with torch.no_grad():
+            for i in range(0, input_size, output_size):
+                for j in range(0, input_size, output_size):
+                    # Extract the patch
+                    patch = g_img[i:i + output_size, j:j + output_size]
+
+                    # Make sure it's the right shape
+                    assert patch.shape == (output_size, output_size, 3)
+
+                    # Add an extra batch dimension, and send patch to the same device as model
+                    patch = patch.unsqueeze(0).to(self.device)
+
+                    # Run the model on the patch
+                    patch_output = self.model(patch.permute(0, 3, 1, 2))
+
+                    # Remove the batch dimension and copy to CPU
+                    patch_output = patch_output.squeeze(0).cpu()
+
+                    # Make sure it's the right shape
+                    patch_output = patch_output.squeeze(0)
+                    assert patch_output.shape == (output_size, output_size)
+
+                    # Insert the output patch into the output image
+                    output[i:i + output_size, j:j + output_size] = patch_output
+
+
+            green = np.zeros((output_size, output_size, 3), np.uint8)
+            green[:, :, 1] = 255 
+            cv2.imshow("normalized", normalized_blackness_heatmap)
+            self.neural_heatmap = F.sigmoid(output.detach()).cpu() * normalized_blackness_heatmap
+            self.discretize_heatmap(0.2, green)
+
 
 
 class ImageWranger:
@@ -209,10 +293,25 @@ class Histogram(tk.Tk):
         self.canvas.get_tk_widget().pack()
 
         self.button1 = tk.Button(self, text="Update", command=self.update_histogram)
+        self.button2 = tk.Button(self, text="Save CSV", command=self.save_csv)
         self.button1.pack(side=tk.LEFT)
+        self.button2.pack(side=tk.LEFT)
         # Start a thread that updates the histogram
         #threading.Thread(target=self.update_histogram, daemon=True).start()
         self.update_histogram()
+
+    def save_csv(self):
+        image = self.master.master.image_handler.right
+        # Update the histogram
+        self.ax.cla()  # Clear the plot
+        img_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        self.h, self.s, self.v = cv2.split(img_hsv)
+        filh = self.h.flatten()[self.h.flatten() > 10].astype(np.uint8)
+        fils = self.s.flatten()[self.s.flatten() > 10].astype(np.uint8)
+        filv = self.v.flatten()[self.v.flatten() > 10].astype(np.uint8)
+        data = np.stack((filh, fils, filv), axis=-1)
+        filename = filedialog.asksaveasfilename(initialdir="Desktop", filetypes=[("TXT file", "*.csv")])
+        np.savetxt(filename + ".csv", data, delimiter=",")
 
     def update_histogram(self):
         # Generate some random data
@@ -248,18 +347,20 @@ class ExperimentInterface(ttk.Frame):
 
         self.create_widgets()
 
-    def change_material_callback(self, option: str):
-        self.material = option
+
 
     def create_widgets(self):
         # ------------ Mask Widgets -----------
         self.mask_container = tk.Frame(self, width=200, height=500, relief=tk.RIDGE, borderwidth=3)
         self.mask_container.grid(row=0, column=0,  sticky=(tk.N, tk.S, tk.W))
 
+        def change_material_callback(option: str):
+            self.material = option
+
         choices = [choice for choice in self.master.master.colormap]
         option_variable = tk.StringVar(self)
         option_variable.set('Select Type')
-        self.options = ttk.OptionMenu(self.mask_container, option_variable, *choices, command=lambda: (self.change_material_callback(option_variable.get())))
+        self.options = ttk.OptionMenu(self.mask_container, option_variable, *choices, command=lambda x: (change_material_callback(option_variable.get())))
         self.options.grid(row=0, column=0, padx=10, pady=10)
 
         self.man_mask = ttk.Button(self.mask_container, text="Manual Mask", state=self.state, command=lambda:
@@ -297,13 +398,23 @@ class ExperimentInterface(ttk.Frame):
         )
         self.leg_error.grid(row=1, column=0, padx=10, pady=5)
 
+        self.leg_error = ttk.Button(self.a_container, text="Neural\nSegmentation", state=self.masked_state, command=lambda:
+        (
+             self.analysis.set(self.master.image_handler.mask, self.material, self.master.image_handler.hasmask),
+             self.analysis.neural_segmentation(),
+             add_error_callback(),
+             self.master.console.update(),
+             self.master.update_image_interface(2)),
+        )
+        self.leg_error.grid(row=2, column=0, padx=10, pady=5)
+
         self.pixelarea = ttk.Button(self.a_container, text="Pixel Area", state=self.masked_state, command=lambda:
         (
             SingletonTextHandler.add_message(f"Masked area is {src.analysis.mask_size(self.master.image_handler.right)} pixels"),
             self.master.console.update(),
             self.master.update_image_interface(2)),
                                     )
-        self.pixelarea.grid(row=2, column=0, padx=10, pady=0)
+        self.pixelarea.grid(row=3, column=0, padx=10, pady=0)
 
 
         # ------------ View Widgets -----------
@@ -312,6 +423,25 @@ class ExperimentInterface(ttk.Frame):
 
         self.leg_error = ttk.Button(self.v_container, text="Show\nHistogram", state=self.masked_state, command=lambda: (Histogram(self)))
         self.leg_error.grid(row=0, column=0, padx=10, pady=5)
+
+        def hsvvals_callback():
+            img_hsv = cv2.cvtColor(self.master.image_handler.right, cv2.COLOR_RGB2HSV)
+            self.h, self.s, self.v = cv2.split(img_hsv)
+            filh = self.h.flatten()[self.h.flatten() > 10].astype(np.uint8)
+            fils = self.s.flatten()[self.s.flatten() > 10].astype(np.uint8)
+            filv = self.v.flatten()[self.v.flatten() > 10].astype(np.uint8)
+            SingletonTextHandler.add_message(f"Hue: {round(filh.mean(), 4)}")
+            self.master.console.update()
+            SingletonTextHandler.add_message(f"Sat: {round(fils.mean(), 4)}")
+            self.master.console.update()
+            SingletonTextHandler.add_message(f"Val: {round(filv.mean(), 4)}")
+            self.master.console.update()
+            SingletonTextHandler.add_message(f"---------")
+            self.master.console.update()
+
+
+        self.hsvvals = ttk.Button(self.v_container, text="HSV Vals", state=self.masked_state, command=hsvvals_callback)
+        self.hsvvals.grid(row=1, column=0, padx=10, pady=0)
 
     def change_state(self, state: bool):
         self.state = 'normal' if state else 'disabled'
