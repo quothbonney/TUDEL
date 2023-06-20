@@ -53,6 +53,37 @@ class Application(tk.Tk):
         self.resizable = False
 
 
+class SliderWindow:
+    def __init__(self, master):
+        self.master = master
+        self.window = tk.Toplevel(self.master)
+        self.window.title("Slider Window")
+        def scale_callback(*args):
+            self.master.analysis.discretize_heatmap(self.scale1.get())
+            self.master.master.image_handler.image_select = 2
+            self.master.master.image_handler.errors = self.master.analysis.error_image
+            self.master.master.image_handler.right = self.master.analysis.error_image
+
+            self.master.master.update_image_interface(2)
+        # Create three Scale widgets (sliders)
+        self.scale1 = tk.Scale(self.window, from_=0, to=1, resolution=0.01, orient=tk.HORIZONTAL, 
+                               label="Threshold", command=scale_callback)
+
+        # Create an "Update" button
+        self.button = tk.Button(self.window, text="Update", command=self.update_values)
+
+        # Pack the widgets
+        self.scale1.pack()
+        self.scale2.pack()
+        self.scale3.pack()
+        self.button.pack()
+
+    def update_values(self):
+        print("Value 1:", self.scale1.get())
+        print("Value 2:", self.scale2.get())
+        print("Value 3:", self.scale3.get())
+
+
 class MaskAnalyzer:
     def __init__(self, master, image, material: str, auto_masked: bool):
         # Image is the colored mask, image_mask is the pure boolean
@@ -80,13 +111,14 @@ class MaskAnalyzer:
         # Error image not for scientific analysis. Visualization purposes only. Use error_mask
         self.error_image = EMPTY_TENSOR
         self.neural_heatmap = EMPTY_TENSOR
+        self.green = EMPTY_TENSOR
 
     
-    def discretize_heatmap(self, threshold, green):
+    def discretize_heatmap(self, threshold):
         omask = torch.where(torch.tensor(self.neural_heatmap) > threshold, torch.tensor(1.0), torch.tensor(0.0)).to(torch.uint8).numpy()
         self.error_mask = omask
         ori_sz = self.image.shape
-        dst = cv2.bitwise_or(green, np.zeros(green.shape, dtype=np.uint8), mask=omask)
+        dst = cv2.bitwise_or(self.green, np.zeros(self.green.shape, dtype=np.uint8), mask=omask)
         resize_transform = transforms.Resize((ori_sz[0], ori_sz[1]))
 
         dst2 = torch.tensor(dst).permute((2,0,1))
@@ -119,14 +151,15 @@ class MaskAnalyzer:
 
         # Create a binary mask where black pixels are 1 and others are 0
         _, binary = cv2.threshold(gray, 1, 1, cv2.THRESH_BINARY_INV)
-        cv2.imshow("test", t.permute((1,2,0)).numpy())
+        #cv2.imshow("test", t.permute((1,2,0)).numpy())
         # Create a 7x7 kernel filled with ones
         kernel = np.ones((ori_sz[0] // 10, ori_sz[1] // 10), np.uint8)
 
         # Convolve the binary image with your kernel
         blackness_heatmap = cv2.filter2D(binary, -1, kernel)
         normalized_blackness_heatmap  = abs(1 - (blackness_heatmap / np.max(blackness_heatmap))) ** 2
-        plt.imshow(blackness_heatmap)
+        #
+        # plt.imshow(blackness_heatmap)
         output = torch.zeros((input_size, input_size))
         self.model = self.model.to(self.device)
         g_img = rgb_to_hsv(t).permute((1,2,0))
@@ -160,9 +193,10 @@ class MaskAnalyzer:
 
             green = np.zeros((output_size, output_size, 3), np.uint8)
             green[:, :, 1] = 255 
-            cv2.imshow("normalized", normalized_blackness_heatmap)
+            self.green = green
+            #cv2.imshow("normalized", normalized_blackness_heatmap)
             self.neural_heatmap = F.sigmoid(output.detach()).cpu() * normalized_blackness_heatmap
-            self.discretize_heatmap(0.2, green)
+            self.discretize_heatmap(0.2)
 
 
 
@@ -402,6 +436,7 @@ class ExperimentInterface(ttk.Frame):
         (
              self.analysis.set(self.master.image_handler.mask, self.material, self.master.image_handler.hasmask),
              self.analysis.neural_segmentation(),
+             SliderWindow(self),
              add_error_callback(),
              self.master.console.update(),
              self.master.update_image_interface(2)),
