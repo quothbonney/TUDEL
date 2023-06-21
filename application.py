@@ -70,12 +70,10 @@ class SliderWindow:
                                label="Threshold", command=scale_callback)
 
         # Create an "Update" button
-        self.button = tk.Button(self.window, text="Update", command=self.update_values)
+        self.button = tk.Button(self.window, text="Update", command=scale_callback)
 
         # Pack the widgets
         self.scale1.pack()
-        self.scale2.pack()
-        self.scale3.pack()
         self.button.pack()
 
     def update_values(self):
@@ -96,9 +94,10 @@ class MaskAnalyzer:
         self.error_image = EMPTY_TENSOR
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.ismodelloaded = False
 
         self.model = UNet(n_channels=3, n_classes=1)
-        self.model.load_state_dict(torch.load("data/tudel_unet.1", map_location=torch.device(self.device)))
+        
 
 
     # Alternative constructor for recalling object
@@ -124,6 +123,10 @@ class MaskAnalyzer:
         dst2 = torch.tensor(dst).permute((2,0,1))
         dst3 = resize_transform(dst2).permute((1,2,0))
         self.error_image = cv2.addWeighted(dst3.numpy(), 0.5, self.image, 0.7, 0)
+        error_size = src.analysis.mask_size(dst3.numpy())
+        deposit_size = src.analysis.mask_size(self.image)
+        SingletonTextHandler.add_message(f"Percent Imperfection: {round((error_size/deposit_size)*100, 5)}%")
+
 
     def gradient_segmentation(self):
         self.error_mask = src.analysis.errors(self.material, self.image, is_auto=self.auto_masked)
@@ -141,6 +144,9 @@ class MaskAnalyzer:
         SingletonTextHandler.add_message(f"Percent Imperfection: {round((error_size/deposit_size)*100, 5)}%")
 
     def neural_segmentation(self, input_size=512, output_size=512):
+        if not self.ismodelloaded:
+            self.model.load_state_dict(torch.load("data/tudel_unet.1", map_location=torch.device(self.device)))
+            self.ismodelloaded = True
         cv2.imwrite("test.png", self.image)
         ori_sz = self.image.shape
         t = transforms.Resize((input_size, input_size))(Image.fromarray(self.image))
@@ -170,19 +176,14 @@ class MaskAnalyzer:
                 for j in range(0, input_size, output_size):
                     # Extract the patch
                     patch = g_img[i:i + output_size, j:j + output_size]
-
                     # Make sure it's the right shape
                     assert patch.shape == (output_size, output_size, 3)
-
                     # Add an extra batch dimension, and send patch to the same device as model
                     patch = patch.unsqueeze(0).to(self.device)
-
                     # Run the model on the patch
                     patch_output = self.model(patch.permute(0, 3, 1, 2))
-
                     # Remove the batch dimension and copy to CPU
                     patch_output = patch_output.squeeze(0).cpu()
-
                     # Make sure it's the right shape
                     patch_output = patch_output.squeeze(0)
                     assert patch_output.shape == (output_size, output_size)
@@ -197,7 +198,6 @@ class MaskAnalyzer:
             #cv2.imshow("normalized", normalized_blackness_heatmap)
             self.neural_heatmap = F.sigmoid(output.detach()).cpu() * normalized_blackness_heatmap
             self.discretize_heatmap(0.2)
-
 
 
 class ImageWranger:
